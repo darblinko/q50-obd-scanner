@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>obd-scanner</title>
+  <meta name="description" content="Car diagnostic app for KWP2000, UDS and OBD-II over ELM327-compatible adapters, with an embedded Claude agent that reaches the car only through MCP tools and a read-only request gate.">
+  <link rel="icon" href="data:,">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;600&display=swap">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <header class="site-bar">
+    <a href="https://darblinko.github.io/">Mitchell Foutz</a>
+    <a href="https://github.com/darblinko/q50-obd-scanner">Source on GitHub</a>
+  </header>
+
+  <main>
+    <section class="intro">
+      <h1>obd-scanner</h1>
+      <p class="lede">A desktop diagnostic app that reads every answering module of a car over KWP2000, UDS and OBD-II, with an embedded Claude agent that gets 18 MCP tools and no serial port. For automotive engineers who want manufacturer-level reads from an ELM327-class adapter, and AI engineers who want a worked example of an agent bounded by a tool layer and a PreToolUse hook.</p>
+      <dl class="record">
+        <div><dt>Repository</dt><dd>darblinko/q50-obd-scanner</dd></div>
+        <div><dt>Revision</dt><dd><code>4f6100b</code></dd></div>
+        <div><dt>Measured</dt><dd>2026-10-28 (tests), 2026-10-17 (field session)</dd></div>
+        <div><dt>License</dt><dd>Apache-2.0</dd></div>
+      </dl>
+    </section>
+
+    <section>
+      <h2>Problem</h2>
+      <p>A 2017 Infiniti Q50 3.0t had intermittent heavy steering. Its rack electric power steering (EPS) module answers on CAN IDs 742/762 with Nissan KWP2000 local identifiers (<code>21 xx</code>) after a <code>10 C0</code> session request. A generic OBD-II reader queries the engine through modes 01 and 03 and never reaches it, and no public source gives EPS identifiers for the Q50.</p>
+      <p>An AI agent that helps with this work needs live car data and the ability to change the decoding code. Given a shell and the serial port, the same agent could also send ECU reset, security access or write services to the car.</p>
+      <aside class="note">
+        <p>Vehicle and module facts: <code>docs/q50-findings-2026-10-17.md</code>. Absence of public EPS identifiers: <code>docs/research/q50-diagnostics.md</code>.</p>
+      </aside>
+    </section>
+
+    <section>
+      <h2>How it works</h2>
+      <p>The GUI and the agent share one session worker thread, and every request to the car passes one allowlist. The agent reaches the car through an in-process MCP server; its file and shell tools pass a PreToolUse guard hook first.</p>
+      <aside class="note">
+        <p>Protocol layer: <code>q50diag/transport/elm.py</code>, <code>elm_parse.py</code>, <code>adapters.py</code>; <code>q50diag/protocol/nissan.py</code>, <code>ford.py</code>.</p>
+        <p>Request gate: <code>check_request_allowed</code> in <code>q50diag/core/transport.py</code>; sweep rules in <code>q50diag/protocol/discovery.py</code>.</p>
+        <p>Tool boundary: <code>q50diag/mechaniq/guard.py</code>, <code>tools.py</code>, <code>changes.py</code>, <code>runner.py</code>.</p>
+      </aside>
+      <pre class="mermaid">
+flowchart TB
+  user["User"] --> pages["GUI pages"]
+  user --> panel["MechanIQ panel"]
+  panel --> agent["Claude Agent SDK client"]
+  agent --> hook{{"PreToolUse guard hook"}}
+  hook -->|allowed| files["Read, Edit, Write, Bash inside the project"]
+  hook --> mcp["In-process MCP server q50, 18 tools"]
+  mcp --> session["Session worker thread"]
+  pages --> session
+  session --> gate{{"Request allowlist"}}
+  gate --> transport["ElmTransport or SimulatedTransport"]
+  transport --> adapter["ELM327 or STN adapter"]
+  adapter --> car["Vehicle CAN: KWP2000, UDS, OBD-II"]
+      </pre>
+      <h3>Protocol layer</h3>
+      <p>The ELM driver sets up the adapter with <code>ATE0 ATL0 ATS1 ATH1 ATAT1</code>, selects HS-CAN 500 kbps or Ford MS-CAN with STN <code>STP</code> commands, addresses each module with <code>ATSH</code> and <code>ATCRA</code>, and reassembles ISO 15765-2 frames per CAN ID. A <code>7F xx 78</code> response pending reply is retried once with the longest ELM timeout.</p>
+      <h3>Request gate</h3>
+      <p>Allowed: OBD modes 01, 02, 03, 05, 06, 07, 09, 0A; services 17, 18, 19, 1A, 21, 22; 3E; and 10 with sub-functions 01, 03, 81, 89 or C0. Clearing codes (04, 14) needs a confirmation dialog on the Trouble Codes page. Everything else raises <code>RequestBlocked</code>. Discovery sends only <code>3E 00</code> and never transmits on a response ID.</p>
+      <h3>Tool boundary and guard hook</h3>
+      <p>The agent runs with permission prompts off, so the PreToolUse hook is its boundary. It denies file writes outside the project, Bash that opens a serial device, access to <code>.env</code> files and the settings file that holds the API key, <code>git push</code>, <code>git reset --hard</code> and <code>git clean</code>, and all PowerShell. Bash is split into shell segments with <code>shlex</code>, and redirect targets are checked as writes. The agent's <code>raw_read</code> tool sends one request through the same allowlist without the clear permission. <code>apply_change</code> runs the related tests before it reloads and commits an edit.</p>
+    </section>
+
+    <section>
+      <h2>Measured results</h2>
+      <p>One field session on the Q50 with a vLinker FS (STN1170) at 115200 baud, about 16 ms per command.</p>
+      <figure class="chart" data-chart="field-test"></figure>
+      <aside class="note">
+        <p>Field test source: <code>docs/q50-findings-2026-10-17.md</code>. The EPS angle is bytes 3 and 4 of the <code>21 01</code> record, from 97 samples at rest and 215 during turns.</p>
+        <p>Guard cases: <code>uv run pytest --collect-only -q tests/test_mechaniq_guard.py</code></p>
+        <p>Blocked payload list: <code>BLOCKED</code> in <code>tests/test_backend_integration.py</code>.</p>
+      </aside>
+      <p>Safety tests in the suite at revision 4f6100b, all passing. The guard cases include allowed commands as controls, so a guard that denies everything would fail them.</p>
+      <figure class="chart" data-chart="guard-cases"></figure>
+      <figure class="chart" data-chart="gate-cases"></figure>
+    </section>
+
+    <section>
+      <h2>Run it</h2>
+      <ol class="steps">
+        <li><pre><code>git clone https://github.com/darblinko/q50-obd-scanner
+cd obd-scanner</code></pre></li>
+        <li><pre><code>uv sync --frozen</code></pre></li>
+        <li><pre><code>QT_QPA_PLATFORM=offscreen uv run pytest -q</code></pre></li>
+        <li><pre><code>uv run python -m q50diag --sim</code></pre></li>
+      </ol>
+      <aside class="note">
+        <p>Needs Python 3.11 or newer on the system and uv. With an adapter, pass <code>--port COM5</code> or <code>--port /dev/ttyUSB0</code>.</p>
+      </aside>
+    </section>
+
+    <section>
+      <h2>Limitations</h2>
+      <ul>
+        <li>Field data covers one car, one adapter and one session. The heavy steering complaint was not reproduced while EPS data was captured.</li>
+        <li>Five of the seven decoded EPS fields (velocity, assist load, driver torque, temperature, assist limit) are inferences.</li>
+        <li>The OBD port on this Q50 is gatewayed: 0 broadcast frames in a 5 s unfiltered monitor, so every value is polled.</li>
+        <li>The Mustang S550 profiles come from public address lists; the repository holds no field capture from a Mustang.</li>
+        <li>The guard hook catches agent mistakes and does not sandbox the agent: a script the agent writes can do anything its interpreter allows.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    obd-scanner. Apache-2.0. Figures generated from <code>docs/data.json</code> at <code>4f6100b</code>.
+  </footer>
+
+  <script src="charts.js" defer></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.esm.min.mjs";
+    const dark = document.documentElement.dataset.theme === "dark" ||
+      (document.documentElement.dataset.theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+    mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "neutral",
+      fontFamily: "IBM Plex Sans, system-ui, sans-serif", securityLevel: "strict" });
+  </script>
+</body>
+</html>
