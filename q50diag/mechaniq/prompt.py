@@ -15,6 +15,8 @@ from q50diag.transport.adapters import DEFAULT_ADAPTER_KEY, AdapterProfile, adap
 from q50diag.vehicles import VehicleProfile, default_vehicle
 
 Q50_TOOL_PREFIX = "mcp__q50__"
+# No MultiEdit: the Claude Code CLI bundled with claude-agent-sdk 0.2.173 (2.1.309) has no
+# such tool. guard.py still checks MultiEdit paths as writes.
 EDIT_TOOLS = ["Edit", "Write", "NotebookEdit"]
 CHANGE_TOOLS = [Q50_TOOL_PREFIX + "apply_change", Q50_TOOL_PREFIX + "undo_change"]
 
@@ -158,13 +160,17 @@ AGENTS: dict[str, AgentDefinition] = {
     "data-analyst": AgentDefinition(
         description="Read-only analysis of live readings, recordings, trouble codes and the app log.",
         prompt=DATA_ANALYST_PROMPT,
+        # Bash stays: in a source checkout the analyst computes statistics with Python in Bash
+        # (_statistics_hint). The guard allows Bash writes inside the project, so the read-only
+        # role there rests on the prompt.
         disallowedTools=EDIT_TOOLS + CHANGE_TOOLS,
         model="inherit",
     ),
     "test-coach": AgentDefinition(
         description="Writes and runs a step-by-step drive or parked test, marking events and checking readings.",
         prompt=TEST_COACH_PROMPT,
-        disallowedTools=EDIT_TOOLS + CHANGE_TOOLS,
+        # The coach works through the q50 tools only and needs no shell.
+        disallowedTools=EDIT_TOOLS + CHANGE_TOOLS + ["Bash"],
         model="inherit",
     ),
 }
