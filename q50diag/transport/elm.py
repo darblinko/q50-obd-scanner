@@ -46,8 +46,7 @@ READ_ONLY_COMMANDS = ("ATI", "AT@1", "ATRV", "ATDP", "ATDPN", "STI", "STDI")
 
 
 class ElmTransport(Transport):
-    def __init__(self, port: str, baudrate: int | None = None,
-                 adapter: AdapterProfile | None = None, bus: str = "hs"):
+    def __init__(self, port: str, baudrate: int | None = None, adapter: AdapterProfile | None = None, bus: str = "hs"):
         self.port = port
         self.baudrate = baudrate
         self._adapter = adapter or adapter_by_key(DEFAULT_ADAPTER_KEY)
@@ -90,8 +89,7 @@ class ElmTransport(Transport):
             failures = []
             for baudrate in (self.baudrate,) if self.baudrate else self._adapter.baud_rates:
                 try:
-                    self._serial = serial.Serial(self.port, baudrate=baudrate,
-                                                 timeout=0.02, write_timeout=1.0)
+                    self._serial = serial.Serial(self.port, baudrate=baudrate, timeout=0.02, write_timeout=1.0)
                     self._discard_stale_input()
                     self._command("ATZ", 2.0)
                     identity = self._command("ATI", 1.0)
@@ -135,8 +133,10 @@ class ElmTransport(Transport):
             self._device_identity = self._optional_command("STDI") or firmware
             self._protocol_commands = self._bus_config.stn_commands()
         elif self._bus_config.elm_protocol is None:
-            raise TransportError("MS-CAN needs an STN-based adapter such as the OBDLink EX or vLinker FS "
-                                 f"({self._bus_config.label} selected; adapter reports {self._device_identity!r})")
+            raise TransportError(
+                "MS-CAN needs an STN-based adapter such as the OBDLink EX or vLinker FS "
+                f"({self._bus_config.label} selected; adapter reports {self._device_identity!r})"
+            )
         else:
             firmware = None
             self._protocol_commands = (self._bus_config.elm_protocol,)
@@ -150,8 +150,12 @@ class ElmTransport(Transport):
             return
         self._detected_adapter = guess_adapter(self._device_identity)
         if self._detected_adapter is not None:
-            LOGGER.warning("Selected %s, but the adapter identifies as %r (%s); continuing",
-                           self._adapter.name, self._device_identity, self._detected_adapter.name)
+            LOGGER.warning(
+                "Selected %s, but the adapter identifies as %r (%s); continuing",
+                self._adapter.name,
+                self._device_identity,
+                self._detected_adapter.name,
+            )
 
     def _setup_commands(self) -> tuple[str, ...]:
         return (*SETUP_BEFORE_PROTOCOL, *self._protocol_commands, *SETUP_AFTER_PROTOCOL)
@@ -330,8 +334,10 @@ class ElmTransport(Transport):
             return answers
         # The ELM printed its prompt after 7F xx 78, so it is no longer
         # listening. Repeat the request once with the longest ELM timeout.
-        LOGGER.info("Response pending from %s; retrying with ATAT0 ATSTFF",
-                    ", ".join(f"0x{can_id:03X}" for can_id in sorted(pending)))
+        LOGGER.info(
+            "Response pending from %s; retrying with ATAT0 ATSTFF",
+            ", ".join(f"0x{can_id:03X}" for can_id in sorted(pending)),
+        )
         self._command("ATAT0")
         self._command("ATSTFF")
         self._timeout_units = 0xFF
@@ -343,8 +349,9 @@ class ElmTransport(Transport):
             LOGGER.info("Response pending did not complete for %s", sorted(pending))
         return {**answers, **retry_answers}
 
-    def request(self, tx_id: int, rx_id: int, payload: bytes, timeout_s: float = 1.0,
-                allow_clear: bool = False) -> bytes:
+    def request(
+        self, tx_id: int, rx_id: int, payload: bytes, timeout_s: float = 1.0, allow_clear: bool = False
+    ) -> bytes:
         check_request_allowed(payload, allow_clear)
         with self._lock:
             self._prepare()
@@ -424,7 +431,7 @@ class ElmTransport(Transport):
         while not stop.is_set() and time.monotonic() < deadline:
             match = re.search(rb"[\r\n>]", self._buffer)
             if match:
-                line, self._buffer = self._buffer[:match.start()], self._buffer[match.end():]
+                line, self._buffer = self._buffer[: match.start()], self._buffer[match.end() :]
                 if match[0] == b">":
                     # The adapter left monitor mode on its own (e.g. BUFFER FULL).
                     self._monitor_ended = True
@@ -441,8 +448,9 @@ class ElmTransport(Transport):
                 if not chunk:
                     stop.wait(0.002)
 
-    def monitor(self, stop: threading.Event, can_ids: set[int] | None = None,
-                max_duration_s: float | None = None) -> Iterator[CanFrame]:
+    def monitor(
+        self, stop: threading.Event, can_ids: set[int] | None = None, max_duration_s: float | None = None
+    ) -> Iterator[CanFrame]:
         if stop.is_set() or can_ids == set() or (max_duration_s is not None and max_duration_s <= 0):
             return
         if can_ids:

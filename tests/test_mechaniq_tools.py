@@ -20,9 +20,23 @@ from q50diag.recorder import Recorder
 from tests.test_gui_fakes import app, ctx, wait_until  # noqa: F401
 
 TOOL_NAMES = {
-    "get_status", "list_parameters", "get_readings", "get_dtcs", "scan_dtcs", "read_module",
-    "start_polling", "stop_polling", "start_steering_watch", "stop_steering_watch", "mark_event",
-    "list_recordings", "read_recording", "raw_read", "read_app_log", "navigate", "apply_change",
+    "get_status",
+    "list_parameters",
+    "get_readings",
+    "get_dtcs",
+    "scan_dtcs",
+    "read_module",
+    "start_polling",
+    "stop_polling",
+    "start_steering_watch",
+    "stop_steering_watch",
+    "mark_event",
+    "list_recordings",
+    "read_recording",
+    "raw_read",
+    "read_app_log",
+    "navigate",
+    "apply_change",
     "undo_change",
 }
 
@@ -170,8 +184,12 @@ def test_polling_and_readings(harness):
     assert started["polling"] == ["EPS.21.01.supply"]
     assert started["unknown"] == ["nope.key"]
     assert "mechaniq" in context.session.polling_owners()
-    assert wait_until(lambda: (context.store.stats("EPS.21.01.supply") or None) is not None
-                      and context.store.stats("EPS.21.01.supply").count >= 3)
+    assert wait_until(
+        lambda: (
+            (context.store.stats("EPS.21.01.supply") or None) is not None
+            and context.store.stats("EPS.21.01.supply").count >= 3
+        )
+    )
     readings = data_of(run_tool(tools, "get_readings", {"keys": ["EPS.21.01.supply", "nope.key"], "samples": 2}))
     supply = readings["EPS.21.01.supply"]
     assert supply["unit"] == "V" and supply["value"] == pytest.approx(0x0DBD * 0.004)
@@ -223,7 +241,7 @@ def test_raw_read_refuses_writes(harness, payload):
     result = run_tool(tools, "raw_read", {"module": "EPS", "payload": payload})
     assert result["is_error"]
     assert "safety gate" in text_of(result)
-    sent = [p for _tx, p, _clear in transport.requests[len(sent_before):]]
+    sent = [p for _tx, p, _clear in transport.requests[len(sent_before) :]]
     assert bytes.fromhex(payload) not in sent
 
 
@@ -273,7 +291,9 @@ def test_list_and_read_recording(harness, tmp_path):
     _write_recording(tmp_path)
     listing = data_of(run_tool(tools, "list_recordings"))
     assert listing["count"] == 1 and listing["recordings"][0]["active"] is False
-    summary = data_of(run_tool(tools, "read_recording", {"path": "latest", "keys": ["adapter.voltage", "x"], "points": 5}))
+    summary = data_of(
+        run_tool(tools, "read_recording", {"path": "latest", "keys": ["adapter.voltage", "x"], "points": 5})
+    )
     assert summary["rows"] == 12
     assert summary["duration_s"] == pytest.approx(9.0)
     assert summary["events"] == [{"offset_s": 5.0, "text": "Heavy"}]

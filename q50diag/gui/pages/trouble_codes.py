@@ -47,7 +47,9 @@ class TroubleCodesPage(Page):
         super().__init__(ctx, parent)
         self._result: DtcScanResult | None = None
         self._busy = False
-        self.scan_button = button("Scan all modules", "primary", "Read DTCs from OBD-II and every known or discovered module")
+        self.scan_button = button(
+            "Scan all modules", "primary", "Read DTCs from OBD-II and every known or discovered module"
+        )
         self.scan_button.clicked.connect(self._scan_all)
         self.header.add_action(self.scan_button)
         self._build_filters()
@@ -163,8 +165,7 @@ class TroubleCodesPage(Page):
         module = self.module_filter.currentText()
         kind = self.kind_filter.currentText()
         return [
-            d for d in self._result.dtcs
-            if (module == ALL or d.module == module) and (kind == ALL or d.kind == kind)
+            d for d in self._result.dtcs if (module == ALL or d.module == module) and (kind == ALL or d.kind == kind)
         ]
 
     def _fill_table(self) -> None:
@@ -227,7 +228,8 @@ class TroubleCodesPage(Page):
         extra = (
             " Readiness monitors also reset to incomplete, so an emissions inspection will fail "
             "until the drive cycles complete."
-            if name == OBD_TARGET else ""
+            if name == OBD_TARGET
+            else ""
         )
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Warning)

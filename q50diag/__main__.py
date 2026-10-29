@@ -23,8 +23,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     source = parser.add_mutually_exclusive_group()
     source.add_argument("--sim", action="store_true", help="start connected to the built-in simulator")
     source.add_argument("--port", help="connect directly to this serial port, e.g. COM5 or /dev/ttyUSB0")
-    parser.add_argument("--vehicle", choices=[vehicle.key for vehicle in VEHICLES], default=None,
-                        help="vehicle profile; overrides the one saved in the app settings")
+    parser.add_argument(
+        "--vehicle",
+        choices=[vehicle.key for vehicle in VEHICLES],
+        default=None,
+        help="vehicle profile; overrides the one saved in the app settings",
+    )
     parser.add_argument("--log-dir", type=Path, default=DEFAULT_LOG_DIR, help="folder for q50diag.log and recordings")
     parser.add_argument("--debug", action="store_true", help="log every adapter command and reply")
     parser.add_argument("--smoke-seconds", type=float, default=None, help=argparse.SUPPRESS)

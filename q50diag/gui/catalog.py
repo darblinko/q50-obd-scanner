@@ -81,11 +81,7 @@ def _obd_entries(backend: Backend, supported_pids: list[int] | None) -> list[Cat
     if ecm is None:
         return []
     allowed = set(supported_pids) if supported_pids else None
-    return [
-        CatalogEntry(ecm, param)
-        for pid, param in sorted(pids.items())
-        if allowed is None or pid in allowed
-    ]
+    return [CatalogEntry(ecm, param) for pid, param in sorted(pids.items()) if allowed is None or pid in allowed]
 
 
 def _module_entries(backend: Backend, extra_modules: list[ModuleAddress]) -> list[CatalogEntry]:

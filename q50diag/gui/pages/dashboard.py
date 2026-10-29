@@ -78,7 +78,9 @@ class DashboardPage(Page):
         self.layout_combo.setMinimumWidth(180)
         self.layout_combo.setToolTip("Saved layout")
         self.layout_combo.currentIndexChanged.connect(self._on_layout_combo)
-        self.settings_button = button("Instrument panel settings", tooltip="Layout preset, slot ranges and saved layouts")
+        self.settings_button = button(
+            "Instrument panel settings", tooltip="Layout preset, slot ranges and saved layouts"
+        )
         self.settings_button.clicked.connect(self.open_settings)
         self.poll_button = button("Start polling", "primary")
         self.poll_button.setCheckable(True)
@@ -127,8 +129,11 @@ class DashboardPage(Page):
             self._on_disk = prefs
         if saved is None and not self._save_warned:
             self._save_warned = True
-            self.ctx.notify("Dashboard: favorites file is unreadable or from a newer version; "
-                            "changes are kept for this session only", "warn")
+            self.ctx.notify(
+                "Dashboard: favorites file is unreadable or from a newer version; "
+                "changes are kept for this session only",
+                "warn",
+            )
 
     def _apply(self, prefs: Preferences) -> None:
         self._prefs = prefs
@@ -222,8 +227,13 @@ class DashboardPage(Page):
         if not self.ctx.catalog or vehicle.key == self._adopted_vehicle:
             return
         self._adopted_vehicle = vehicle.key
-        prefs = adopt_vehicle_layout(self._prefs, vehicle.key, vehicle.name, vehicle.default_favorites,
-                                     lambda key: self.ctx.entry(key) is not None)
+        prefs = adopt_vehicle_layout(
+            self._prefs,
+            vehicle.key,
+            vehicle.name,
+            vehicle.default_favorites,
+            lambda key: self.ctx.entry(key) is not None,
+        )
         if prefs != self._prefs:
             self._commit(prefs)
 
@@ -264,8 +274,10 @@ class DashboardPage(Page):
         if slot is not None:
             menu.addAction("Clear", lambda: self.assign_slot(index, ""))
             favorite = slot.key in self._prefs.favorites
-            menu.addAction("Remove from favorites" if favorite else "Add to favorites",
-                           lambda: self.set_favorite(slot.key, not favorite))
+            menu.addAction(
+                "Remove from favorites" if favorite else "Add to favorites",
+                lambda: self.set_favorite(slot.key, not favorite),
+            )
         menu.addSeparator()
         menu.addAction("Instrument panel settings...", self.open_settings)
         menu.exec(self.gauges[index].mapToGlobal(position))

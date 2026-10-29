@@ -33,11 +33,14 @@ def test_simulator_keeps_request_latency_for_every_vehicle():
         assert transport.vehicle is vehicle
 
 
-@pytest.mark.parametrize("vehicle, vin", [
-    (Q50, "JN1SAMPLEXXXXXXX0"),
-    (MUSTANG_GT350R, "1FASAMPLEXXXXXXX1"),
-    (MUSTANG_GT, "1FASAMPLEXXXXXXX2"),
-])
+@pytest.mark.parametrize(
+    "vehicle, vin",
+    [
+        (Q50, "JN1SAMPLEXXXXXXX0"),
+        (MUSTANG_GT350R, "1FASAMPLEXXXXXXX1"),
+        (MUSTANG_GT, "1FASAMPLEXXXXXXX2"),
+    ],
+)
 def test_simulator_vin_per_vehicle(vehicle, vin):
     backend, transport = open_backend(vehicle)
     assert backend.read_vin(transport) == vin
@@ -68,7 +71,7 @@ def test_manual_gt350r_does_not_answer_the_transmission_did():
     pcm = backend.module_by_name("PCM")
     assert "PCM.22.1E1C" not in [p.key for p in backend.module_parameters(pcm)]
     with pytest.raises(NegativeResponse):
-        ford.request(transport, pcm, b"\x22\x1E\x1C", timeout_s=0.1)
+        ford.request(transport, pcm, b"\x22\x1e\x1c", timeout_s=0.1)
 
 
 def test_ford_simulator_identification_dtcs_and_discovery():
@@ -96,6 +99,7 @@ def test_simulator_only_answers_modules_on_the_selected_bus():
 
 # --- bus filtering in scans and discovery ---------------------------------
 
+
 class RecordingTransport:
     def __init__(self):
         self.sent = []
@@ -120,13 +124,19 @@ def test_scan_and_discovery_skip_modules_on_another_bus():
 
 def test_uds_sweep_listens_at_request_plus_8_and_never_sends_on_response_ids():
     transport = RecordingTransport()
-    discover_modules(transport, modules=MUSTANG_GT.modules, probes=MUSTANG_GT.discovery_probes,
-                     sweep_protocol="uds", response_offsets=(8,))
+    discover_modules(
+        transport,
+        modules=MUSTANG_GT.modules,
+        probes=MUSTANG_GT.discovery_probes,
+        sweep_protocol="uds",
+        response_offsets=(8,),
+    )
     response_ids = {m.rx_id for m in MUSTANG_GT.modules}
     assert not response_ids & set(transport.sent)
 
 
 # --- app settings ---------------------------------------------------------
+
 
 def test_app_settings_roundtrip_and_defaults(tmp_path):
     path = tmp_path / "cfg" / "app.json"

@@ -20,8 +20,6 @@ def list_ports() -> list[PortInfo]:
     ports = []
     for port in serial_ports.comports():
         description = _description(port)
-        likely = port.vid == 0x0403 or any(
-            token in description.casefold() for token in LIKELY_ADAPTER_TOKENS
-        )
+        likely = port.vid == 0x0403 or any(token in description.casefold() for token in LIKELY_ADAPTER_TOKENS)
         ports.append(PortInfo(port.device, description, port.vid, port.pid, likely))
     return sorted(ports, key=lambda port: (not port.is_likely_vlinker, port.device))

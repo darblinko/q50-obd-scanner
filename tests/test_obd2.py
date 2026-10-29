@@ -7,14 +7,29 @@ from q50diag.protocol.reader import read_parameter
 from q50diag.transport.sim import VIN, SimulatedTransport
 
 
-@pytest.mark.parametrize("pid, data, expected", [
-    (0x0C, "1AF8", 1726), (0x0D, "64", 100), (0x05, "7B", 83),
-    (0x10, "01F4", 5), (0x06, "80", 0), (0x06, "A0", 25),
-    (0x07, "00", -100), (0x42, "36B0", 14), (0x0E, "80", 0),
-    (0x22, "0100", 20.224), (0x23, "0100", 2560), (0x44, "8000", 1),
-    (0x32, "FFF0", -0.004), (0x3C, "1388", 460), (0x4D, "0002", 120),
-    (0x5C, "82", 90), (0x61, "7D", 0), (0xA6, "000186A0", 10000),
-])
+@pytest.mark.parametrize(
+    "pid, data, expected",
+    [
+        (0x0C, "1AF8", 1726),
+        (0x0D, "64", 100),
+        (0x05, "7B", 83),
+        (0x10, "01F4", 5),
+        (0x06, "80", 0),
+        (0x06, "A0", 25),
+        (0x07, "00", -100),
+        (0x42, "36B0", 14),
+        (0x0E, "80", 0),
+        (0x22, "0100", 20.224),
+        (0x23, "0100", 2560),
+        (0x44, "8000", 1),
+        (0x32, "FFF0", -0.004),
+        (0x3C, "1388", 460),
+        (0x4D, "0002", 120),
+        (0x5C, "82", 90),
+        (0x61, "7D", 0),
+        (0xA6, "000186A0", 10000),
+    ],
+)
 def test_pid_formulas(pid, data, expected):
     assert obd2.MODE01_PIDS[pid].decode(bytes.fromhex(data)) == pytest.approx(expected)
 
@@ -67,7 +82,7 @@ def test_supported_walk_reaches_c0():
 
     transport = Pages()
     assert obd2.supported_pids(transport) == [1, 0x21, 0x41, 0x61, 0x81, 0xA1, 0xC1]
-    assert transport.requests[-1] == b"\x01\xC0"
+    assert transport.requests[-1] == b"\x01\xc0"
 
 
 def test_monitor_status_spark_and_clear(sim):
@@ -96,7 +111,10 @@ def test_vin_freeze_frame_and_dtcs(sim):
     assert obd2.read_vin(sim) == VIN
     result = obd2.read_dtcs(sim)
     assert {(dtc.code, dtc.kind) for dtc in result} == {
-        ("P0171", "stored"), ("P0300", "pending"), ("P0171", "permanent")}
+        ("P0171", "stored"),
+        ("P0300", "pending"),
+        ("P0171", "permanent"),
+    }
     frames = obd2.read_freeze_frame(sim)
     assert frames and not any(reading.error for reading in frames)
     assert next(reading.value for reading in frames if reading.key == "obd.02.02") == "P0171"
@@ -113,8 +131,7 @@ def test_functional_dtc_module_names():
         def request_functional(self, request):
             if request != b"\x03":
                 raise NegativeResponse(request[0], 0x11)
-            return {0x7E8: b"\x43\x01\x01\x71", 0x7E9: b"\x43\x01\x07\x00",
-                    0x7EA: b"\x43\x01\xD0\x00"}
+            return {0x7E8: b"\x43\x01\x01\x71", 0x7E9: b"\x43\x01\x07\x00", 0x7EA: b"\x43\x01\xd0\x00"}
 
     assert [dtc.module for dtc in obd2.read_dtcs(Replies())] == ["ECM", "TCM", "0x7EA"]
 

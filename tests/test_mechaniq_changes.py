@@ -36,7 +36,9 @@ pytestmark = [pytest.mark.skipif(not git_available(), reason="git is not install
 
 
 def git(root: Path, *args: str) -> str:
-    result = subprocess.run(["git", *args], cwd=root, stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True)
+    result = subprocess.run(
+        ["git", *args], cwd=root, stdin=subprocess.DEVNULL, capture_output=True, text=True, check=True
+    )
     return result.stdout
 
 
@@ -152,8 +154,9 @@ def test_failing_tests_on_repo_without_commits(empty_repo, checks):
     log = _change_log(empty_repo, checks["fail"])
     entry = log.apply("nope", ["q50diag/data/table.py"], FakeReloader())
     assert entry.status == TESTS_FAILED
-    head = subprocess.run(["git", "rev-parse", "--verify", "HEAD"], cwd=empty_repo, stdin=subprocess.DEVNULL,
-                          capture_output=True)
+    head = subprocess.run(
+        ["git", "rev-parse", "--verify", "HEAD"], cwd=empty_repo, stdin=subprocess.DEVNULL, capture_output=True
+    )
     assert head.returncode != 0
 
 
@@ -237,7 +240,10 @@ def test_undo_reverts_and_reloads(repo, checks):
     assert applied.commit in message
     assert git(repo, "show", "--name-only", "--format=", "HEAD").split() == ["q50diag/data/table.py"]
     assert "M  q50diag/data/other.py" in git(repo, "status", "--porcelain")
-    assert [label for _plan, label in reloader.calls] == [f"Code change {applied.id}: seven", f"Undo code change {applied.id}"]
+    assert [label for _plan, label in reloader.calls] == [
+        f"Code change {applied.id}: seven",
+        f"Undo code change {applied.id}",
+    ]
     assert reloader.calls[1][0].live_modules == ("q50diag.data.table",)
     assert [e.status for e in log.entries()] == [APPLIED, UNDO]
     assert log.undo(applied.id).status == REJECTED

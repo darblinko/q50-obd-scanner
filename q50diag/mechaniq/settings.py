@@ -79,8 +79,10 @@ def api_key_warning(key: str) -> str:
     """A warning for a key that does not look like an Anthropic API key, or ""."""
     if key.strip().startswith(API_KEY_PREFIX):
         return ""
-    return (f"This does not look like an Anthropic API key. Keys start with {API_KEY_PREFIX}. "
-            "Check that the whole key was copied.")
+    return (
+        f"This does not look like an Anthropic API key. Keys start with {API_KEY_PREFIX}. "
+        "Check that the whole key was copied."
+    )
 
 
 def load_settings(path: Path | None = None) -> MechaniqSettings:
@@ -142,8 +144,7 @@ def child_env(settings: MechaniqSettings, base: Mapping[str, str] | None = None)
     auth_mode = API_KEY if is_packaged() else settings.auth_mode
     if auth_mode == API_KEY:
         if not settings.api_key.strip():
-            raise MissingApiKeyError("API key mode is selected but no API key is set; "
-                                     "enter one in MechanIQ settings")
+            raise MissingApiKeyError("API key mode is selected but no API key is set; enter one in MechanIQ settings")
         env["ANTHROPIC_API_KEY"] = settings.api_key.strip()
     elif auth_mode != SUBSCRIPTION:
         raise ValueError(f"unknown auth mode {settings.auth_mode!r}")

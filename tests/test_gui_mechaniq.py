@@ -122,8 +122,14 @@ SCRIPT = [
     Event("delta", text="Checking the "),
     Event("delta", text="decoder."),
     Event("text", text="Checking the decoder."),
-    Event("tool_use", data={"id": "t1", "name": "Task", "input": {
-        "description": "Fix decoder", "prompt": "Fix the 21 01 decoder", "subagent_type": "code-fixer"}}),
+    Event(
+        "tool_use",
+        data={
+            "id": "t1",
+            "name": "Task",
+            "input": {"description": "Fix decoder", "prompt": "Fix the 21 01 decoder", "subagent_type": "code-fixer"},
+        },
+    ),
     Event("agent_started", "t1", data={"title": "Fix decoder", "subagent_type": "code-fixer"}),
     Event("delta", "t1", text="Reading nissan.py"),
     Event("tool_use", "t1", data={"id": "r1", "name": "Read", "input": {"file_path": "/x/q50diag/protocol/nissan.py"}}),
@@ -211,8 +217,7 @@ def test_transcript_view_throttles_streamed_deltas(app):
         model.handle_event(Event("delta", text=f"chunk{index} "))
     assert wait_until(lambda: "chunk59" in view.toPlainText(), 2)
     assert view.render_count <= 3
-    model.handle_event(Event("tool_use", data={"id": "x", "name": "mcp__q50__get_readings",
-                                               "input": {"keys": ["v"]}}))
+    model.handle_event(Event("tool_use", data={"id": "x", "name": "mcp__q50__get_readings", "input": {"keys": ["v"]}}))
     assert wait_until(lambda: "running" in view.toPlainText(), 2)
     model.handle_event(Event("tool_result", data={"tool_use_id": "x"}))
     assert wait_until(lambda: "get_readings" in view.toPlainText() and "done" in view.toPlainText(), 2)
@@ -258,9 +263,12 @@ def test_panel_sends_on_enter_and_stop_interrupts(app):
 
 
 def test_changes_tab_lists_newest_first_and_undo(app):
-    log = FakeChangeLog([Change("c1", 1_760_000_000.0, "first fix", ("q50diag/protocol/nissan.py",)),
-                         Change("c2", 1_760_000_050.0, "second fix", ("q50diag/gui/pages/steering.py",),
-                                "tests_failed", "", "")])
+    log = FakeChangeLog(
+        [
+            Change("c1", 1_760_000_000.0, "first fix", ("q50diag/protocol/nissan.py",)),
+            Change("c2", 1_760_000_050.0, "second fix", ("q50diag/gui/pages/steering.py",), "tests_failed", "", ""),
+        ]
+    )
     controller, _runner = make_controller(log)
     panel = MechaniqPanel(controller)
     rows = panel.changes.rows
@@ -479,4 +487,3 @@ def test_build_mechaniq_survives_a_broken_runtime(ctx, monkeypatch):
         assert "not available" in win.mechaniq.model.transcript()[0].text
     finally:
         win.close()
-

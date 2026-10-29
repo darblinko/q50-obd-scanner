@@ -118,7 +118,9 @@ def _write_recording(folder):
     path = recorder.start()
     base = time.time()
     for index in range(20):
-        recorder.write_reading(Reading("adapter.voltage", 12.0 + index * 0.01, "V", base + index * 0.1), "Battery voltage", "ADAPTER")
+        recorder.write_reading(
+            Reading("adapter.voltage", 12.0 + index * 0.01, "V", base + index * 0.1), "Battery voltage", "ADAPTER"
+        )
         recorder.write_reading(Reading("obd.01.0C", 800 + index, "rpm", base + index * 0.1), "Engine RPM", "ECM")
     recorder.write_reading(Reading("obd.vin", "JN1TEXT", "", base), "VIN", "ECM")
     recorder.mark_event("Steering felt heavy", base + 1.0)

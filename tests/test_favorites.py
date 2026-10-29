@@ -53,18 +53,29 @@ def test_round_trip_v2(tmp_path):
     stored = json.loads(path.read_text())
     assert stored["version"] == VERSION == 2
     assert stored["layouts"]["track"] == {
-        "name": "Track", "preset": "1+4",
+        "name": "Track",
+        "preset": "1+4",
         "slots": [{"key": "obd.01.0C", "range": [0.0, 8000.0]}, None, {"key": "x"}],
     }
 
 
 def test_v2_documented_example_loads(tmp_path):
     path = tmp_path / "favorites.json"
-    write_json(path, {
-        "version": 2, "favorites": ["obd.01.0C", "obd.01.0D"], "active_layout": "default",
-        "layouts": {"default": {"name": "Default", "preset": "2x3", "slots": [
-            {"key": "obd.01.0C", "range": [0, 8000]}, {"key": "obd.01.0D"}, None]}},
-    })
+    write_json(
+        path,
+        {
+            "version": 2,
+            "favorites": ["obd.01.0C", "obd.01.0D"],
+            "active_layout": "default",
+            "layouts": {
+                "default": {
+                    "name": "Default",
+                    "preset": "2x3",
+                    "slots": [{"key": "obd.01.0C", "range": [0, 8000]}, {"key": "obd.01.0D"}, None],
+                }
+            },
+        },
+    )
     prefs = load_favorites(path)
     assert prefs.favorites == ("obd.01.0C", "obd.01.0D")
     assert active_layout(prefs).slots == (SlotAssignment("obd.01.0C", (0.0, 8000.0)), SlotAssignment("obd.01.0D"), None)
@@ -72,14 +83,22 @@ def test_v2_documented_example_loads(tmp_path):
 
 def test_v2_invalid_entries_are_sanitized(tmp_path):
     path = tmp_path / "favorites.json"
-    write_json(path, {
-        "version": 2, "favorites": ["a", "a", 3, "b"], "active_layout": "gone",
-        "layouts": {
-            "one": {"name": "One", "preset": "9x9", "slots": [
-                {"key": "a", "range": [10, 0]}, {"key": 5}, "junk", {"key": "b", "range": [0, 1e400]}]},
-            "bad": "not a layout",
+    write_json(
+        path,
+        {
+            "version": 2,
+            "favorites": ["a", "a", 3, "b"],
+            "active_layout": "gone",
+            "layouts": {
+                "one": {
+                    "name": "One",
+                    "preset": "9x9",
+                    "slots": [{"key": "a", "range": [10, 0]}, {"key": 5}, "junk", {"key": "b", "range": [0, 1e400]}],
+                },
+                "bad": "not a layout",
+            },
         },
-    })
+    )
     prefs = load_favorites(path)
     assert prefs.favorites == ("a", "b")
     assert [layout.id for layout in prefs.layouts] == ["one"]
@@ -120,12 +139,15 @@ def test_first_save_over_v1_writes_backup_once(tmp_path):
     assert json.loads(backup.read_text()) == original
 
 
-@pytest.mark.parametrize("content", [
-    "not json",
-    "[1, 2]",
-    json.dumps({"version": 3, "favorites": ["future"]}),
-    json.dumps({"version": "two"}),
-])
+@pytest.mark.parametrize(
+    "content",
+    [
+        "not json",
+        "[1, 2]",
+        json.dumps({"version": 3, "favorites": ["future"]}),
+        json.dumps({"version": "two"}),
+    ],
+)
 def test_newer_or_corrupt_file_is_never_overwritten(tmp_path, content, caplog):
     path = tmp_path / "favorites.json"
     path.write_text(content, encoding="utf-8")

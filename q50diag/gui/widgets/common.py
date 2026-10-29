@@ -141,7 +141,9 @@ class PageHeader(QWidget):
         return widget
 
 
-def make_table(headers: list[str], stretch_column: int | None = None, mono_columns: tuple[int, ...] = ()) -> QTableWidget:
+def make_table(
+    headers: list[str], stretch_column: int | None = None, mono_columns: tuple[int, ...] = ()
+) -> QTableWidget:
     table = QTableWidget(0, len(headers))
     table.setHorizontalHeaderLabels(headers)
     table.verticalHeader().setVisible(False)

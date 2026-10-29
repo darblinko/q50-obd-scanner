@@ -10,7 +10,7 @@ import math
 
 # (hi, lo, status) per module, sent as a 19 02 record with failure type 00.
 # U0100 lost communication with ECM/PCM A, U0121 lost communication with ABS.
-MODULE_CODES = {"ABS": [b"\xC1\x00\x28"], "IPC": [b"\xC1\x21\x2C"]}
+MODULE_CODES = {"ABS": [b"\xc1\x00\x28"], "IPC": [b"\xc1\x21\x2c"]}
 # Status for the PCM's stored OBD-II codes: pending, confirmed, failed since clear, MIL requested.
 PCM_DTC_STATUS = 0xAC
 AT_REST_OIL_LIFE = 73

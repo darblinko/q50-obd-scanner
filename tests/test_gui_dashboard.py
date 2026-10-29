@@ -168,11 +168,13 @@ def test_recording_keeps_polling_after_leaving_the_page(page, ctx, tmp_path):
 
 def test_values_render_in_gauges(page, ctx):
     now = time.time()
-    ctx.store.add_many([
-        Reading("obd.01.0D", 40, "km/h", now),
-        Reading("obd.01.0D", 300, "km/h", now + 0.1),
-        Reading("EPS.21.01.b10", "OPEN", "", now),
-    ])
+    ctx.store.add_many(
+        [
+            Reading("obd.01.0D", 40, "km/h", now),
+            Reading("obd.01.0D", 300, "km/h", now + 0.1),
+            Reading("EPS.21.01.b10", "OPEN", "", now),
+        ]
+    )
     page.assign_slot(3, "EPS.21.01.b10")
     page.refresh_values()
     speed = page.gauges[1]

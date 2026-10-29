@@ -22,7 +22,7 @@ def decode_kwp_dtc_response(payload: bytes, module_name: str, describe_fn: Descr
         raise ValueError("Truncated KWP DTC response")
     result = []
     for offset in range(2, 2 + count * 3, 3):
-        hi, lo, status = payload[offset:offset + 3]
+        hi, lo, status = payload[offset : offset + 3]
         if hi == lo == 0:
             continue
         code = decode_two_byte(hi, lo)
@@ -38,7 +38,7 @@ def decode_uds_dtc_response(payload: bytes, module_name: str, describe_fn: Descr
         raise ValueError("Truncated UDS DTC response")
     result = []
     for offset in range(3, len(payload), 4):
-        hi, lo, failure_type, status = payload[offset:offset + 4]
+        hi, lo, failure_type, status = payload[offset : offset + 4]
         if hi == lo == failure_type == 0:
             continue
         base = decode_two_byte(hi, lo)

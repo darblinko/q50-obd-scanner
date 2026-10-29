@@ -235,8 +235,7 @@ def test_default_path_is_under_home_and_outside_the_project():
 )
 def test_guard_blocks_the_agent_from_the_settings_file(tool_name, tool_input):
     hook = make_guard(PROJECT_ROOT, DEFAULT_PATH)
-    data = {"hook_event_name": "PreToolUse", "cwd": str(PROJECT_ROOT), "tool_name": tool_name,
-            "tool_input": tool_input}
+    data = {"hook_event_name": "PreToolUse", "cwd": str(PROJECT_ROOT), "tool_name": tool_name, "tool_input": tool_input}
     result = asyncio.run(hook(data, "toolu_1", {"signal": None}))
     decision = result["hookSpecificOutput"]
     assert decision["permissionDecision"] == "deny"

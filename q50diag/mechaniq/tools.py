@@ -92,7 +92,13 @@ def reading_dict(reading: Reading) -> dict[str, Any]:
 
 
 def dtc_dict(dtc: Dtc) -> dict[str, Any]:
-    return {"code": dtc.code, "description": dtc.description, "module": dtc.module, "kind": dtc.kind, "status": dtc.status}
+    return {
+        "code": dtc.code,
+        "description": dtc.description,
+        "module": dtc.module,
+        "kind": dtc.kind,
+        "status": dtc.status,
+    }
 
 
 def dtc_result_dict(result: DtcScanResult) -> dict[str, Any]:
@@ -304,7 +310,9 @@ class Q50Tools:
         return {
             "connected": session.connected,
             "port": session.port,
-            "adapter": None if adapter is None else {
+            "adapter": None
+            if adapter is None
+            else {
                 "identity": adapter.identity,
                 "description": adapter.description,
                 "protocol": adapter.protocol,
@@ -335,15 +343,21 @@ class Q50Tools:
             param = entry.param
             haystack = " ".join((param.key, param.name, entry.module.name, param.category, param.unit)).lower()
             if all(term in haystack for term in terms):
-                matches.append({
-                    "key": param.key,
-                    "name": param.name,
-                    "module": entry.module.name,
-                    "unit": param.unit,
-                    "category": param.category,
-                    "polled": entry.polled,
-                })
-        return {"count": len(matches), "shown": min(len(matches), MAX_PARAMETERS), "parameters": matches[:MAX_PARAMETERS]}
+                matches.append(
+                    {
+                        "key": param.key,
+                        "name": param.name,
+                        "module": entry.module.name,
+                        "unit": param.unit,
+                        "category": param.category,
+                        "polled": entry.polled,
+                    }
+                )
+        return {
+            "count": len(matches),
+            "shown": min(len(matches), MAX_PARAMETERS),
+            "parameters": matches[:MAX_PARAMETERS],
+        }
 
     def _readings_main(self, keys: list[str], samples: int) -> dict[str, Any]:
         store, now = self.ctx.store, time.time()
@@ -521,13 +535,15 @@ class Q50Tools:
         items = []
         for path in paths[:MAX_RECORDINGS]:
             stat = path.stat()
-            items.append({
-                "name": path.name,
-                "path": str(path),
-                "size_bytes": stat.st_size,
-                "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
-                "active": path == active,
-            })
+            items.append(
+                {
+                    "name": path.name,
+                    "path": str(path),
+                    "size_bytes": stat.st_size,
+                    "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
+                    "active": path == active,
+                }
+            )
         return ok({"folder": str(folder), "count": len(paths), "recordings": items})
 
     async def read_recording(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -655,40 +671,74 @@ def _safe(name: str, handler: Callable[[dict[str, Any]], Any]) -> Callable[[dict
 
 # (name, description, input schema)
 TOOL_SPECS: tuple[tuple[str, str, dict[str, Any]], ...] = (
-    ("get_status", "Connection, adapter, protocol, battery voltage, recording state and path, "
-     "polling owners and the current page.", schema()),
-    ("list_parameters", "Search the parameter catalog. Every whitespace-separated term must match the key, "
-     "name, module, category or unit. Empty search lists everything.", schema({"search": STRING})),
-    ("get_readings", "Latest value, min, max, count, error count and rate for parameter keys (all keys with "
-     "data when empty). samples > 0 adds the last N samples as [seconds before now, value].",
-     schema({"keys": KEY_LIST, "samples": {"type": "integer", "minimum": 0, "maximum": MAX_SAMPLES}})),
+    (
+        "get_status",
+        "Connection, adapter, protocol, battery voltage, recording state and path, "
+        "polling owners and the current page.",
+        schema(),
+    ),
+    (
+        "list_parameters",
+        "Search the parameter catalog. Every whitespace-separated term must match the key, "
+        "name, module, category or unit. Empty search lists everything.",
+        schema({"search": STRING}),
+    ),
+    (
+        "get_readings",
+        "Latest value, min, max, count, error count and rate for parameter keys (all keys with "
+        "data when empty). samples > 0 adds the last N samples as [seconds before now, value].",
+        schema({"keys": KEY_LIST, "samples": {"type": "integer", "minimum": 0, "maximum": MAX_SAMPLES}}),
+    ),
     ("get_dtcs", "Trouble codes from the last DTC scan and from module reads, without contacting the car.", schema()),
     ("scan_dtcs", "Scan every module for trouble codes and return them. Takes up to two minutes.", schema()),
-    ("read_module", "Read identification, trouble codes and (optionally) parameters from one module, "
-     "for example EPS, ABS or ECM.",
-     schema({"module": STRING, "include_parameters": {"type": "boolean"}}, ("module",))),
-    ("start_polling", "Poll these parameter keys continuously under the 'mechaniq' owner, replacing the "
-     "previous MechanIQ set. Other owners (steering watch, live data) keep polling.",
-     schema({"keys": KEY_LIST}, ("keys",))),
+    (
+        "read_module",
+        "Read identification, trouble codes and (optionally) parameters from one module, for example EPS, ABS or ECM.",
+        schema({"module": STRING, "include_parameters": {"type": "boolean"}}, ("module",)),
+    ),
+    (
+        "start_polling",
+        "Poll these parameter keys continuously under the 'mechaniq' owner, replacing the "
+        "previous MechanIQ set. Other owners (steering watch, live data) keep polling.",
+        schema({"keys": KEY_LIST}, ("keys",)),
+    ),
     ("stop_polling", "Stop the parameters polled by start_polling.", schema()),
-    ("start_steering_watch", "Start the Steering page watch (polls the steering set and starts recording), "
-     "so the UI shows it running.", schema()),
+    (
+        "start_steering_watch",
+        "Start the Steering page watch (polls the steering set and starts recording), so the UI shows it running.",
+        schema(),
+    ),
     ("stop_steering_watch", "Stop the Steering page watch. Recording keeps running.", schema()),
-    ("mark_event", "Mark an event now: writes an EVENT row to the active recording and a marker on every chart.",
-     schema({"label": STRING}, ("label",))),
+    (
+        "mark_event",
+        "Mark an event now: writes an EVENT row to the active recording and a marker on every chart.",
+        schema({"label": STRING}, ("label",)),
+    ),
     ("list_recordings", "Recording CSV files in the log folder, newest first.", schema()),
-    ("read_recording", "Summarize a recording ('latest', a file name or a path): parameters with min, max and "
-     "mean, row count, time span and events. keys plus points > 0 add series resampled to that many time bins.",
-     schema({"path": STRING, "keys": KEY_LIST, "points": {"type": "integer", "minimum": 0, "maximum": MAX_POINTS}})),
-    ("raw_read", "Send one raw request through the app's session and the read-only safety gate. Pass module "
-     "plus a hex payload such as '21 01', or an adapter command such as 'ATRV' without a module.",
-     schema({"module": STRING, "payload": STRING}, ("payload",))),
-    ("read_app_log", "Last N lines (default 100) of q50diag.log.",
-     schema({"lines": {"type": "integer", "minimum": 1, "maximum": MAX_LOG_LINES}})),
+    (
+        "read_recording",
+        "Summarize a recording ('latest', a file name or a path): parameters with min, max and "
+        "mean, row count, time span and events. keys plus points > 0 add series resampled to that many time bins.",
+        schema({"path": STRING, "keys": KEY_LIST, "points": {"type": "integer", "minimum": 0, "maximum": MAX_POINTS}}),
+    ),
+    (
+        "raw_read",
+        "Send one raw request through the app's session and the read-only safety gate. Pass module "
+        "plus a hex payload such as '21 01', or an adapter command such as 'ATRV' without a module.",
+        schema({"module": STRING, "payload": STRING}, ("payload",)),
+    ),
+    (
+        "read_app_log",
+        "Last N lines (default 100) of q50diag.log.",
+        schema({"lines": {"type": "integer", "minimum": 1, "maximum": MAX_LOG_LINES}}),
+    ),
     ("navigate", "Show a page of the app by its title, for example 'Steering'.", schema({"page": STRING}, ("page",))),
-    ("apply_change", "Apply a code change you made: runs the tests, hot reloads and commits it. Call it after "
-     "every edit with a one-line summary and the changed files relative to the project root. Returns the report.",
-     schema({"summary": STRING, "files": KEY_LIST}, ("summary", "files"))),
+    (
+        "apply_change",
+        "Apply a code change you made: runs the tests, hot reloads and commits it. Call it after "
+        "every edit with a one-line summary and the changed files relative to the project root. Returns the report.",
+        schema({"summary": STRING, "files": KEY_LIST}, ("summary", "files")),
+    ),
     ("undo_change", "Revert a change applied earlier by its change id.", schema({"change_id": STRING}, ("change_id",))),
 )
 

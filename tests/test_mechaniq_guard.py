@@ -157,8 +157,13 @@ def test_allows_normal_bash(command):
 
 def test_other_hook_events_pass_through():
     hook = make_guard(ROOT, SETTINGS)
-    result = asyncio.run(hook({"hook_event_name": "PostToolUse", "tool_name": "Bash",
-                               "tool_input": {"command": "git push"}}, None, {"signal": None}))
+    result = asyncio.run(
+        hook(
+            {"hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": {"command": "git push"}},
+            None,
+            {"signal": None},
+        )
+    )
     assert result == {}
 
 

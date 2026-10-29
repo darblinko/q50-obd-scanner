@@ -263,7 +263,9 @@ class RecordingsPage(Page):
         for row, event in enumerate(recording.events):
             clock = datetime.fromtimestamp(event.timestamp).strftime("%H:%M:%S.%f")[:-3]
             self.events.setItem(row, 0, table_item(clock, mono=True))
-            self.events.setItem(row, 1, table_item(f"+{event.timestamp - start:.1f} s", mono=True, color=theme.TEXT_DIM))
+            self.events.setItem(
+                row, 1, table_item(f"+{event.timestamp - start:.1f} s", mono=True, color=theme.TEXT_DIM)
+            )
             self.events.setItem(row, 2, table_item(f"#{row + 1}  {event.text}", color=theme.WARN))
 
     def _fill_info(self, recording: Recording) -> None:

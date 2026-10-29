@@ -44,17 +44,49 @@ def _u16(data: bytes) -> int:
 
 
 RPM = ParameterDef("obd.01.0C", "Engine RPM", "rpm", "ECM", "Engine", b"\x01\x0c", lambda d: _u16(d) / 4, 0, 7000)
-SPEED = ParameterDef("obd.01.0D", "Vehicle speed", "km/h", "ECM", "Engine", b"\x01\x0d", lambda d: d[0] if d else None, 0, 250)
-COOLANT = ParameterDef("obd.01.05", "Coolant temperature", "degC", "ECM", "Engine", b"\x01\x05", lambda d: d[0] - 40 if d else None)
-ABS_ANGLE = ParameterDef("ABS.22.1208.steering_angle", "Steering angle (ABS)", "deg", "ABS", "Steering", b"\x22\x12\x08", lambda d: _u16(d) / 10)
-EPS_SUPPLY = ParameterDef("EPS.21.01.supply", "EPS supply voltage", "V", "EPS", "Steering", b"\x21\x01", lambda d: _u16(d) * 0.004)
-EPS_ANGLE = ParameterDef("EPS.21.01.angle", "EPS steering angle", "deg", "EPS", "Steering", b"\x21\x01",
-                         lambda d: int.from_bytes(d[3:5], "big", signed=True) * -0.1)
+SPEED = ParameterDef(
+    "obd.01.0D", "Vehicle speed", "km/h", "ECM", "Engine", b"\x01\x0d", lambda d: d[0] if d else None, 0, 250
+)
+COOLANT = ParameterDef(
+    "obd.01.05", "Coolant temperature", "degC", "ECM", "Engine", b"\x01\x05", lambda d: d[0] - 40 if d else None
+)
+ABS_ANGLE = ParameterDef(
+    "ABS.22.1208.steering_angle",
+    "Steering angle (ABS)",
+    "deg",
+    "ABS",
+    "Steering",
+    b"\x22\x12\x08",
+    lambda d: _u16(d) / 10,
+)
+EPS_SUPPLY = ParameterDef(
+    "EPS.21.01.supply", "EPS supply voltage", "V", "EPS", "Steering", b"\x21\x01", lambda d: _u16(d) * 0.004
+)
+EPS_ANGLE = ParameterDef(
+    "EPS.21.01.angle",
+    "EPS steering angle",
+    "deg",
+    "EPS",
+    "Steering",
+    b"\x21\x01",
+    lambda d: int.from_bytes(d[3:5], "big", signed=True) * -0.1,
+)
 EPS_ASSIST = ParameterDef("EPS.21.01.assist", "EPS assist load", "", "EPS", "Steering", b"\x21\x01", lambda d: d[7])
-EPS_TORQUE = ParameterDef("EPS.21.01.torque", "EPS driver torque", "", "EPS", "Steering", b"\x21\x01",
-                          lambda d: int.from_bytes(d[8:9], "big", signed=True))
-EPS_TEMP = ParameterDef("EPS.21.01.b10", "EPS temperature candidate", "", "EPS", "Steering", b"\x21\x01", lambda d: d[10])
-EPS_LIMIT = ParameterDef("EPS.21.01.b11", "EPS assist limit candidate", "", "EPS", "Steering", b"\x21\x01", lambda d: d[11])
+EPS_TORQUE = ParameterDef(
+    "EPS.21.01.torque",
+    "EPS driver torque",
+    "",
+    "EPS",
+    "Steering",
+    b"\x21\x01",
+    lambda d: int.from_bytes(d[8:9], "big", signed=True),
+)
+EPS_TEMP = ParameterDef(
+    "EPS.21.01.b10", "EPS temperature candidate", "", "EPS", "Steering", b"\x21\x01", lambda d: d[10]
+)
+EPS_LIMIT = ParameterDef(
+    "EPS.21.01.b11", "EPS assist limit candidate", "", "EPS", "Steering", b"\x21\x01", lambda d: d[11]
+)
 EPS_FIELDS = [EPS_SUPPLY, EPS_ANGLE, EPS_TORQUE, EPS_ASSIST, EPS_TEMP, EPS_LIMIT]
 BROADCAST = {
     "bcast.002.steering_angle": ("Steering angle (broadcast)", "deg"),
@@ -194,7 +226,7 @@ class FakeBackend(Backend):
     def read_parameter(self, t, m, p):
         self.reads += 1
         response = t.request(m.tx_id, m.rx_id, p.request)
-        value = p.decode(response[len(p.request):])
+        value = p.decode(response[len(p.request) :])
         if p.key == RPM.key:
             value = 800 + 400 * math.sin(time.time())
         return Reading(p.key, value, p.unit, time.time(), raw=response)

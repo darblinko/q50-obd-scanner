@@ -9,14 +9,15 @@ from q50diag.core.types import DiscoveredModule, ModuleAddress
 from q50diag.protocol.modules import KNOWN_MODULES
 
 LOGGER = logging.getLogger(__name__)
-KNOWN_PROBES = (b"\x3E\x00", b"\x10\x81", b"\x21\x83")
+KNOWN_PROBES = (b"\x3e\x00", b"\x10\x81", b"\x21\x83")
 # Unknown addresses get tester present only, so no session is started on them.
-SWEEP_PROBES = (b"\x3E\x00",)
+SWEEP_PROBES = (b"\x3e\x00",)
 OBD_RESPONSE_IDS = set(range(0x7E8, 0x7F0))
 
 
-def _probe(t: Transport, module: ModuleAddress, stop: threading.Event | None,
-           probes: tuple[bytes, ...] = KNOWN_PROBES) -> DiscoveredModule | None:
+def _probe(
+    t: Transport, module: ModuleAddress, stop: threading.Event | None, probes: tuple[bytes, ...] = KNOWN_PROBES
+) -> DiscoveredModule | None:
     for request in probes:
         if stop is not None and stop.is_set():
             return None
@@ -29,25 +30,30 @@ def _probe(t: Transport, module: ModuleAddress, stop: threading.Event | None,
     return None
 
 
-def sweep_ids(id_range: range, modules: tuple[ModuleAddress, ...],
-              reserved: tuple[ModuleAddress, ...] = ()) -> list[int]:
+def sweep_ids(
+    id_range: range, modules: tuple[ModuleAddress, ...], reserved: tuple[ModuleAddress, ...] = ()
+) -> list[int]:
     """Request ids the sweep may try. Never transmit on an ID that an ECU uses
     for its own responses, or on a known module's request id (probed already)."""
     everyone = (*modules, *reserved)
     response_ids = {module.rx_id for module in everyone} | OBD_RESPONSE_IDS
     known_ids = {module.tx_id for module in everyone}
-    return [tx_id for tx_id in id_range if tx_id not in known_ids | response_ids
-            and tx_id != 0x7DF and 0 <= tx_id <= 0x7FF]
+    return [
+        tx_id for tx_id in id_range if tx_id not in known_ids | response_ids and tx_id != 0x7DF and 0 <= tx_id <= 0x7FF
+    ]
 
 
-def discover_modules(t: Transport, progress: Callable[[int, int, str], None] | None = None,
-                     stop: threading.Event | None = None,
-                     id_range: range = range(0x700, 0x800),
-                     modules: tuple[ModuleAddress, ...] = KNOWN_MODULES,
-                     probes: tuple[bytes, ...] = KNOWN_PROBES,
-                     sweep_protocol: str = "kwp",
-                     response_offsets: tuple[int, ...] = (0x20, 8),
-                     reserved: tuple[ModuleAddress, ...] = ()) -> list[DiscoveredModule]:
+def discover_modules(
+    t: Transport,
+    progress: Callable[[int, int, str], None] | None = None,
+    stop: threading.Event | None = None,
+    id_range: range = range(0x700, 0x800),
+    modules: tuple[ModuleAddress, ...] = KNOWN_MODULES,
+    probes: tuple[bytes, ...] = KNOWN_PROBES,
+    sweep_protocol: str = "kwp",
+    response_offsets: tuple[int, ...] = (0x20, 8),
+    reserved: tuple[ModuleAddress, ...] = (),
+) -> list[DiscoveredModule]:
     """Probe `modules`, then sweep the remaining ids with tester present only.
     `reserved` are modules on another bus: not probed, but their ids are never swept."""
     sweep = sweep_ids(id_range, modules, reserved)
@@ -72,8 +78,9 @@ def discover_modules(t: Transport, progress: Callable[[int, int, str], None] | N
     return sorted(result, key=lambda found: found.address.tx_id)
 
 
-def _sweep_one(t: Transport, tx_id: int, stop: threading.Event | None, protocol: str,
-               response_offsets: tuple[int, ...]) -> DiscoveredModule | None:
+def _sweep_one(
+    t: Transport, tx_id: int, stop: threading.Event | None, protocol: str, response_offsets: tuple[int, ...]
+) -> DiscoveredModule | None:
     for rx_id in (tx_id + offset for offset in response_offsets):
         if rx_id > 0x7FF:
             continue

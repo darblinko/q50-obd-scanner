@@ -8,8 +8,9 @@ from q50diag.protocol.nissan import ensure_session
 LOGGER = logging.getLogger(__name__)
 
 
-def scan_identifiers(t, module, service: int, start: int, end: int, progress=None, stop=None,
-                     session=ensure_session) -> dict[int, bytes]:
+def scan_identifiers(
+    t, module, service: int, start: int, end: int, progress=None, stop=None, session=ensure_session
+) -> dict[int, bytes]:
     """Scan the inclusive interval [start, end]; progress is (done, total, label).
     `session(t, module)` prepares the module first (Nissan session by default)."""
     if service not in (0x21, 0x22):
@@ -29,7 +30,7 @@ def scan_identifiers(t, module, service: int, start: int, end: int, progress=Non
             reply = t.request(module.tx_id, module.rx_id, request, timeout_s=0.1)
             echo = bytes((service + 0x40,)) + request[1:]
             if reply.startswith(echo):
-                result[identifier] = reply[len(echo):]
+                result[identifier] = reply[len(echo) :]
             else:
                 LOGGER.warning("Unexpected explorer echo: %s", reply.hex())
         except (NoResponse, NegativeResponse, RequestBlocked) as error:
@@ -43,8 +44,11 @@ def diff_snapshots(a: dict[int, bytes], b: dict[int, bytes]) -> dict[int, list[i
     result = {}
     for identifier in sorted(a.keys() | b.keys()):
         before, after = a.get(identifier, b""), b.get(identifier, b"")
-        changed = [index for index in range(max(len(before), len(after)))
-                   if before[index:index + 1] != after[index:index + 1]]
+        changed = [
+            index
+            for index in range(max(len(before), len(after)))
+            if before[index : index + 1] != after[index : index + 1]
+        ]
         if changed:
             result[identifier] = changed
     return result

@@ -43,8 +43,12 @@ def load_app_settings(path: Path | None = None) -> AppSettings:
         return AppSettings()
     defaults = AppSettings()
     values = {name: raw.get(name) for name in asdict(defaults)}
-    return AppSettings(**{name: value if isinstance(value, str) and value else getattr(defaults, name)
-                          for name, value in values.items()})
+    return AppSettings(
+        **{
+            name: value if isinstance(value, str) and value else getattr(defaults, name)
+            for name, value in values.items()
+        }
+    )
 
 
 def save_app_settings(settings: AppSettings, path: Path | None = None) -> Path:

@@ -83,7 +83,12 @@ def test_poll_loop_emits_readings_round_robin(session, backend):
     connect(session)
     got = Collector(session, "readings", "poll_rate")
     session.start_polling("live", [(ECM, RPM), (ECM, SPEED), (ABS, ABS_ANGLE), (ADAPTER_MODULE, VOLTAGE_PARAM)])
-    assert wait_until(lambda: {r.key for batch in got["readings"] for r in batch[0]} >= {RPM.key, SPEED.key, ABS_ANGLE.key, VOLTAGE_PARAM.key})
+    assert wait_until(
+        lambda: (
+            {r.key for batch in got["readings"] for r in batch[0]}
+            >= {RPM.key, SPEED.key, ABS_ANGLE.key, VOLTAGE_PARAM.key}
+        )
+    )
     assert wait_until(lambda: any(rate[0] > 0 for rate in got["poll_rate"]), 3)
     session.stop_polling("live")
     assert session.polling_owners() == []
@@ -106,7 +111,11 @@ def test_request_groups_share_module_and_request():
     voltage = (ADAPTER_MODULE, VOLTAGE_PARAM)
     groups = request_groups([(ECM, SPEED), *eps_subs, voltage, (ECM, SPEED), (ABS, ABS_ANGLE)])
     assert [[param.key for _module, param in group] for group in groups] == [
-        [SPEED.key], [param.key for param in EPS_FIELDS], [VOLTAGE_PARAM.key], [ABS_ANGLE.key]]
+        [SPEED.key],
+        [param.key for param in EPS_FIELDS],
+        [VOLTAGE_PARAM.key],
+        [ABS_ANGLE.key],
+    ]
 
 
 def test_poll_step_sends_one_request_for_shared_fields(session, backend):
@@ -122,7 +131,9 @@ def test_poll_step_sends_one_request_for_shared_fields(session, backend):
     assert abs(readings["EPS.21.01.supply"].value - 14.068) < 1e-9
     assert readings["EPS.21.01.b10"].value == 53 and readings["EPS.21.01.b11"].value == 100
     session._pending.clear()
-    bcm_params = [ParameterDef(f"BCM.21.01.b{i}", "BCM item", "", "BCM", "Body", b"\x21\x01", lambda d: d[0]) for i in (0, 1)]
+    bcm_params = [
+        ParameterDef(f"BCM.21.01.b{i}", "BCM item", "", "BCM", "Body", b"\x21\x01", lambda d: d[0]) for i in (0, 1)
+    ]
     sent = len(transport.requests)
     errors = session._read_group([(BCM, param) for param in bcm_params])
     assert len(transport.requests) == sent + 1
@@ -139,7 +150,12 @@ def test_steering_watch_captures_broadcast_between_rounds(session):
         (BROADCAST_MODULE, broadcast_param("bcast.5E4.ps_warning_lamp", "Lamp", "")),
     ]
     session.start_steering_watch(subs)
-    assert wait_until(lambda: {r.key for b in got["readings"] for r in b[0]} >= {SPEED.key, "bcast.300.assist_raw", "bcast.5E4.ps_warning_lamp"})
+    assert wait_until(
+        lambda: (
+            {r.key for b in got["readings"] for r in b[0]}
+            >= {SPEED.key, "bcast.300.assist_raw", "bcast.5E4.ps_warning_lamp"}
+        )
+    )
     ids = {f.can_id for batch in got["frames"] for f in batch[0]}
     assert ids <= {0x300, 0x5E4}
     session.stop_steering_watch()

@@ -83,7 +83,10 @@ def test_context_without_settings_path_writes_nothing(ctx, tmp_path):
 def test_connect_card_combos_drive_the_context(idle_ctx):
     page = ConnectPage(idle_ctx)
     assert [page.vehicle_box.itemData(i) for i in range(page.vehicle_box.count())] == [
-        "q50_2017", "mustang_gt350r_2016", "mustang_gt_2017"]
+        "q50_2017",
+        "mustang_gt350r_2016",
+        "mustang_gt_2017",
+    ]
     assert page.adapter_box.count() == len(ADAPTERS)
     assert page.bus_box.currentData() == "hs"
     page.vehicle_box.setCurrentIndex(2)

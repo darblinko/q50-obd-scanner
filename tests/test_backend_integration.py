@@ -38,7 +38,7 @@ def test_discovery_unknown_address_and_stop(sim):
 
     def request(tx, rx, payload, **kwargs):
         if tx == 0x710 and rx == 0x718:
-            return b"\x7E\x00"
+            return b"\x7e\x00"
         return real_request(tx, rx, payload, **kwargs)
 
     sim.request = request
@@ -83,8 +83,14 @@ def test_known_nissan_parameters_decode(sim):
             assert reading.error == "", (parameter.key, reading)
             assert reading.value is not None
     eps_keys = {parameter.key for parameter in nissan.module_parameters(module_by_name("EPS"))}
-    assert {"EPS.21.01", "EPS.21.01.supply", "EPS.21.01.angle", "EPS.21.01.torque", "EPS.21.01.assist",
-            "EPS.21.01.b11"} <= eps_keys
+    assert {
+        "EPS.21.01",
+        "EPS.21.01.supply",
+        "EPS.21.01.angle",
+        "EPS.21.01.torque",
+        "EPS.21.01.assist",
+        "EPS.21.01.b11",
+    } <= eps_keys
 
 
 def test_simulated_eps_record_matches_q50_layout(sim, monkeypatch):
@@ -116,8 +122,7 @@ def test_explorer_and_diff(sim):
     assert progress[-1][:2] == (17, 17)
     extended = explorer.scan_identifiers(sim, eps, 0x22, 0x1000, 0x1006)
     assert set(extended) == set(range(0x1001, 0x1006))
-    assert explorer.diff_snapshots({1: b"abc", 2: b"x"}, {1: b"aBcd", 3: b"yz"}) == {
-        1: [1, 3], 2: [0], 3: [0, 1]}
+    assert explorer.diff_snapshots({1: b"abc", 2: b"x"}, {1: b"aBcd", 3: b"yz"}) == {1: [1, 3], 2: [0], 3: [0, 1]}
     stop = threading.Event()
     stop.set()
     assert explorer.scan_identifiers(sim, eps, 0x21, 0, 255, stop=stop) == {}
@@ -127,7 +132,7 @@ def test_explorer_and_diff(sim):
 
 def test_reading_errors_are_data_but_connection_loss_propagates(sim):
     eps = module_by_name("EPS")
-    parameter = ParameterDef("test", "test", "", "EPS", "Steering", b"\x21\xFF", bytes.hex)
+    parameter = ParameterDef("test", "test", "", "EPS", "Steering", b"\x21\xff", bytes.hex)
     assert "NRC 0x31" in read_parameter(sim, eps, parameter).error
     blocked = replace(parameter, request=b"\x27\x01")
     assert "allowlist" in read_parameter(sim, eps, blocked).error
@@ -150,7 +155,7 @@ def test_monitor_broadcast_rates_filter_duration_and_stop(sim):
     stop.set()
     assert list(iterator) == []
     assert list(sim.monitor(threading.Event(), set(), 0.01)) == []
-    assert sim.request(0x7E0, 0x7E8, b"\x01\x0C")[0] == 0x41
+    assert sim.request(0x7E0, 0x7E8, b"\x01\x0c")[0] == 0x41
 
 
 def test_stiff_steering_correlates_voltage_current_and_broadcast(sim, monkeypatch):
@@ -177,8 +182,18 @@ def test_drive_cycle_varies_and_warms(sim):
     assert samples[-1].coolant > samples[0].coolant
 
 
-BLOCKED = [b"\x11\x01", b"\x27\x01", b"\x2E\x10\x01", b"\x31\x01", b"\x2F\x01",
-           b"\x34\x00", b"\x10\x02", b"\x04", b"\x14\xFF\x00", b""]
+BLOCKED = [
+    b"\x11\x01",
+    b"\x27\x01",
+    b"\x2e\x10\x01",
+    b"\x31\x01",
+    b"\x2f\x01",
+    b"\x34\x00",
+    b"\x10\x02",
+    b"\x04",
+    b"\x14\xff\x00",
+    b"",
+]
 
 
 @pytest.mark.parametrize("payload", BLOCKED)
@@ -213,7 +228,7 @@ def test_simulator_console_and_unknown_addresses(sim):
     sim.raw_command("ATSH742")
     assert sim.raw_command("2183").startswith("61 83")
     with pytest.raises(NoResponse):
-        sim.request(0x700, 0x720, b"\x3E\x00")
+        sim.request(0x700, 0x720, b"\x3e\x00")
     with pytest.raises(NegativeResponse) as caught:
         sim.request(0x742, 0x762, b"\x22\x00\x00")
     assert caught.value.code == 0x31
@@ -225,7 +240,7 @@ def test_simulator_request_latency_paces_requests():
     # perf_counter: Windows time.monotonic ticks in ~15.6 ms steps and read 0.094 here.
     started = time.perf_counter()
     for _ in range(5):
-        transport.request(0x7E0, 0x7E8, b"\x01\x0C")
+        transport.request(0x7E0, 0x7E8, b"\x01\x0c")
     assert time.perf_counter() - started >= 0.1
     transport.close()
 

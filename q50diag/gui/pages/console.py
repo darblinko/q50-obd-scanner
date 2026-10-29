@@ -37,7 +37,7 @@ class CommandHistory:
 
     def add(self, line: str) -> None:
         if line and (not self._items or self._items[-1] != line):
-            self._items = [*self._items, line][-self._limit:]
+            self._items = [*self._items, line][-self._limit :]
         self._index = len(self._items)
 
     def previous(self) -> str | None:

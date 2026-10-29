@@ -215,8 +215,12 @@ class StackedCharts(QWidget):
             # Anchored to the label's right edge so it sits left of the line and
             # stays visible when the marker is at the live edge of the chart.
             line.label = pg.InfLineLabel(
-                line, text=f"#{number}", position=0.92, anchors=[(1, 0), (1, 0)],
-                color=theme.WARN, fill=pg.mkBrush(theme.BG_DEEP),
+                line,
+                text=f"#{number}",
+                position=0.92,
+                anchors=[(1, 0), (1, 0)],
+                color=theme.WARN,
+                fill=pg.mkBrush(theme.BG_DEEP),
             )
         return line
 

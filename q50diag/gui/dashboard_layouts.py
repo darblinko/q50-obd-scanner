@@ -35,8 +35,9 @@ PRESETS: dict[str, Preset] = {
     "2x2": _uniform("2x2", "2 x 2", 2, 2),
     "2x3": _uniform("2x3", "2 x 3", 2, 3),
     "3x3": _uniform("3x3", "3 x 3", 3, 3),
-    "1+4": Preset("1+4", "1 large + 4 small", 2, 4,
-                  ((0, 0, 2, 2), (0, 2, 1, 1), (0, 3, 1, 1), (1, 2, 1, 1), (1, 3, 1, 1))),
+    "1+4": Preset(
+        "1+4", "1 large + 4 small", 2, 4, ((0, 0, 2, 2), (0, 2, 1, 1), (0, 3, 1, 1), (1, 2, 1, 1), (1, 3, 1, 1))
+    ),
 }
 DEFAULT_PRESET = "2x3"
 MAX_SLOTS = max(preset.slot_count for preset in PRESETS.values())

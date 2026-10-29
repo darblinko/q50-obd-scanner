@@ -56,8 +56,15 @@ def tool_result(tool_use_id: str, content, is_error=False, parent: str | None = 
 
 def result(origin=None, subtype="success", is_error=False) -> ResultMessage:
     return ResultMessage(
-        subtype=subtype, duration_ms=1200, duration_api_ms=900, is_error=is_error, num_turns=3,
-        session_id=SESSION, total_cost_usd=0.042, result="done", origin=origin,
+        subtype=subtype,
+        duration_ms=1200,
+        duration_api_ms=900,
+        is_error=is_error,
+        num_turns=3,
+        session_id=SESSION,
+        total_cost_usd=0.042,
+        result="done",
+        origin=origin,
     )
 
 
@@ -70,7 +77,9 @@ def subagent_turn() -> list:
         delta("Hel"),
         delta("lo"),
         assistant(TextBlock("Hello"), ToolUseBlock(AGENT_CALL, "Agent", AGENT_INPUT)),
-        assistant(ToolUseBlock("toolu_sub_1", "mcp__q50__get_readings", {"keys": ["EPS.21.01.supply"]}), parent=AGENT_CALL),
+        assistant(
+            ToolUseBlock("toolu_sub_1", "mcp__q50__get_readings", {"keys": ["EPS.21.01.supply"]}), parent=AGENT_CALL
+        ),
         tool_result("toolu_sub_1", [{"type": "text", "text": '{"value": 14.1}'}], parent=AGENT_CALL),
         tool_result(AGENT_CALL, "Supply 14.1 V"),
         result(),
@@ -97,13 +106,18 @@ def test_translate_delta_lead_and_subagent():
 
 def test_translate_non_text_stream_events_are_ignored():
     start = StreamEvent(uuid="u", session_id=SESSION, event={"type": "message_start", "message": {}})
-    thinking = StreamEvent(uuid="u", session_id=SESSION,
-                           event={"type": "content_block_delta", "delta": {"type": "thinking_delta", "thinking": "hm"}})
+    thinking = StreamEvent(
+        uuid="u",
+        session_id=SESSION,
+        event={"type": "content_block_delta", "delta": {"type": "thinking_delta", "thinking": "hm"}},
+    )
     assert translate(start) == [] and translate(thinking) == []
 
 
 def test_translate_text_and_tool_use():
-    message = assistant(ThinkingBlock("hm", "sig"), TextBlock("Reading"), ToolUseBlock("toolu_1", "Read", {"file_path": "a.py"}))
+    message = assistant(
+        ThinkingBlock("hm", "sig"), TextBlock("Reading"), ToolUseBlock("toolu_1", "Read", {"file_path": "a.py"})
+    )
     assert translate(message) == [
         AgentEvent("text", "lead", "Reading"),
         AgentEvent("tool_use", "lead", data={"id": "toolu_1", "name": "Read", "input": {"file_path": "a.py"}}),
@@ -115,7 +129,9 @@ def test_translate_agent_call_emits_agent_started(tool_name):
     events = translate(assistant(ToolUseBlock(AGENT_CALL, tool_name, AGENT_INPUT)))
     assert [e.kind for e in events] == ["tool_use", "agent_started"]
     assert events[0].agent_id == "lead"
-    assert events[1] == AgentEvent("agent_started", AGENT_CALL, data={"title": "Check EPS voltage", "subagent_type": "data-analyst"})
+    assert events[1] == AgentEvent(
+        "agent_started", AGENT_CALL, data={"title": "Check EPS voltage", "subagent_type": "data-analyst"}
+    )
 
 
 def test_translate_subagent_messages_are_attributed_to_the_agent_call():
@@ -150,8 +166,14 @@ def test_translate_plain_user_text_is_ignored():
 
 
 def test_translate_result():
-    assert translate(result()) == [AgentEvent("result", "lead", "done", {
-        "cost_usd": 0.042, "duration_ms": 1200, "num_turns": 3, "is_error": False, "subtype": "success"})]
+    assert translate(result()) == [
+        AgentEvent(
+            "result",
+            "lead",
+            "done",
+            {"cost_usd": 0.042, "duration_ms": 1200, "num_turns": 3, "is_error": False, "subtype": "success"},
+        )
+    ]
 
 
 def test_translate_assistant_error():
@@ -162,14 +184,34 @@ def test_translate_assistant_error():
 
 
 def test_translate_task_messages():
-    started = TaskStartedMessage(subtype="task_started", data={}, task_id="t1", description="Background scan",
-                                 uuid="u", session_id=SESSION, tool_use_id="toolu_bg", task_type="local_agent")
-    assert translate(started) == [AgentEvent("agent_started", "toolu_bg", data={"title": "Background scan", "subagent_type": "local_agent"})]
+    started = TaskStartedMessage(
+        subtype="task_started",
+        data={},
+        task_id="t1",
+        description="Background scan",
+        uuid="u",
+        session_id=SESSION,
+        tool_use_id="toolu_bg",
+        task_type="local_agent",
+    )
+    assert translate(started) == [
+        AgentEvent("agent_started", "toolu_bg", data={"title": "Background scan", "subagent_type": "local_agent"})
+    ]
     assert translate(started, frozenset({"toolu_bg"})) == []
-    done = TaskNotificationMessage(subtype="task_notification", data={}, task_id="t1", status="failed",
-                                   output_file="/tmp/x", summary="Scan failed", uuid="u", session_id=SESSION,
-                                   tool_use_id="toolu_bg")
-    assert translate(done) == [AgentEvent("agent_finished", "toolu_bg", "Scan failed", {"status": "failed", "is_error": True})]
+    done = TaskNotificationMessage(
+        subtype="task_notification",
+        data={},
+        task_id="t1",
+        status="failed",
+        output_file="/tmp/x",
+        summary="Scan failed",
+        uuid="u",
+        session_id=SESSION,
+        tool_use_id="toolu_bg",
+    )
+    assert translate(done) == [
+        AgentEvent("agent_finished", "toolu_bg", "Scan failed", {"status": "failed", "is_error": True})
+    ]
 
 
 def test_translate_rate_limit_rejected_is_an_error():
@@ -220,7 +262,9 @@ def test_build_options_api_key_mode(tmp_path):
 
 def test_build_options_stderr_and_custom_agents(tmp_path):
     lines: list[str] = []
-    options = build_options(MechaniqSettings(), tmp_path, MCP_SERVER, fake_guard, agents={}, stderr=lines.append, base_env=ENV)
+    options = build_options(
+        MechaniqSettings(), tmp_path, MCP_SERVER, fake_guard, agents={}, stderr=lines.append, base_env=ENV
+    )
     assert options.agents == {}
     options.stderr("boom")
     assert lines == ["boom"]
@@ -295,7 +339,9 @@ def make_runner(app, tmp_path):  # noqa: F811 (app is the imported fixture)
     runners: list[MechaniqRunner] = []
 
     def build(factory: ClientFactory, settings: MechaniqSettings | None = None):
-        runner = MechaniqRunner(tmp_path, MCP_SERVER, fake_guard, settings or MechaniqSettings(), client_factory=factory)
+        runner = MechaniqRunner(
+            tmp_path, MCP_SERVER, fake_guard, settings or MechaniqSettings(), client_factory=factory
+        )
         events: list[AgentEvent] = []
         runner.event.connect(events.append)
         runners.append(runner)
@@ -366,7 +412,9 @@ def test_runner_injected_result_does_not_end_the_turn(make_runner):
 
 
 def test_runner_interrupt(make_runner):
-    factory = ClientFactory([assistant(TextBlock("working")), WAIT_FOR_INTERRUPT, result(subtype="error_during_execution")])
+    factory = ClientFactory(
+        [assistant(TextBlock("working")), WAIT_FOR_INTERRUPT, result(subtype="error_during_execution")]
+    )
     runner, events = make_runner(factory)
     runner.send("long task")
     assert wait_until(lambda: any(e.kind == "text" for e in events))

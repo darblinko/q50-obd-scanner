@@ -25,7 +25,7 @@ class ProbeTransport:
 def test_session_once_per_module_connection_and_reset():
     nissan.reset_sessions()
     first, second = ProbeTransport(), ProbeTransport()
-    first.replies[b"\x10\xC0"] = second.replies[b"\x10\xC0"] = b"\x50\xC0"
+    first.replies[b"\x10\xc0"] = second.replies[b"\x10\xc0"] = b"\x50\xc0"
     nissan.ensure_session(first, EPS)
     nissan.ensure_session(first, EPS)
     nissan.ensure_session(second, EPS)
@@ -42,7 +42,7 @@ def test_session_fallback_and_no_session_supported():
     transport = ProbeTransport()
     transport.replies[b"\x10\x03"] = b"\x50\x03"
     nissan.ensure_session(transport, EPS)
-    assert [request for request, _ in transport.requests] == [b"\x10\xC0", b"\x10\x03"]
+    assert [request for request, _ in transport.requests] == [b"\x10\xc0", b"\x10\x03"]
     unsupported = ProbeTransport()
     nissan.ensure_session(unsupported, EPS)
     nissan.ensure_session(unsupported, EPS)
@@ -51,16 +51,20 @@ def test_session_fallback_and_no_session_supported():
 
 def test_identification_continues_after_failed_probes():
     transport = ProbeTransport()
-    transport.replies.update({b"\x21\x83": NoResponse("timeout"),
-                              b"\x1A\x81": RequestBlocked("read unavailable"),
-                              b"\x22\xF1\x87": b"\x62\xF1\x87PART\x00"})
+    transport.replies.update(
+        {
+            b"\x21\x83": NoResponse("timeout"),
+            b"\x1a\x81": RequestBlocked("read unavailable"),
+            b"\x22\xf1\x87": b"\x62\xf1\x87PART\x00",
+        }
+    )
     result = nissan.read_identification(transport, EPS)
     assert result == {"Manufacturer part number": "PART. [50 41 52 54 00]"}
 
 
 def test_dtc_uds_fallback_and_unsupported():
     transport = ProbeTransport()
-    transport.replies[b"\x19\x02\xFF"] = bytes.fromhex("59 02 FF 56 04 00 01")
+    transport.replies[b"\x19\x02\xff"] = bytes.fromhex("59 02 FF 56 04 00 01")
     result = nissan.read_module_dtcs(transport, EPS)
     assert result[0].code == "C1604-00" and result[0].kind == "current"
     assert nissan.read_module_dtcs(ProbeTransport(), EPS) == []
@@ -68,7 +72,7 @@ def test_dtc_uds_fallback_and_unsupported():
 
 def test_clear_fallback_carries_confirmation():
     transport = ProbeTransport()
-    transport.replies[b"\x14\xFF\xFF\xFF"] = b"\x54"
+    transport.replies[b"\x14\xff\xff\xff"] = b"\x54"
     nissan.clear_module_dtcs(transport, EPS)
     clears = [(payload, options) for payload, options in transport.requests if payload[0] == 0x14]
     assert len(clears) == 2 and all(options["allow_clear"] for _, options in clears)
@@ -76,11 +80,12 @@ def test_clear_fallback_carries_confirmation():
         nissan.clear_module_dtcs(ProbeTransport(), EPS)
 
 
-@pytest.mark.parametrize("operation", [nissan.ensure_session, nissan.read_identification, nissan.read_module_dtcs,
-                                       nissan.clear_module_dtcs])
+@pytest.mark.parametrize(
+    "operation", [nissan.ensure_session, nissan.read_identification, nissan.read_module_dtcs, nissan.clear_module_dtcs]
+)
 def test_connection_failure_propagates(operation):
     transport = ProbeTransport()
-    transport.replies[b"\x10\xC0"] = TransportError("USB unplugged")
+    transport.replies[b"\x10\xc0"] = TransportError("USB unplugged")
     with pytest.raises(TransportError, match="USB unplugged"):
         operation(transport, EPS)
 
@@ -100,15 +105,15 @@ def test_simulator_reopen_starts_new_session():
 
 def test_dtc_read_raises_when_module_is_silent():
     transport = ProbeTransport()
-    transport.replies[b"\x18\x00\xFF\x00"] = NoResponse("timeout")
-    transport.replies[b"\x19\x02\xFF"] = NoResponse("timeout")
+    transport.replies[b"\x18\x00\xff\x00"] = NoResponse("timeout")
+    transport.replies[b"\x19\x02\xff"] = NoResponse("timeout")
     with pytest.raises(NoResponse):
         nissan.read_module_dtcs(transport, EPS)
 
 
 def test_unexpected_clear_reply_is_not_a_connection_error():
     transport = ProbeTransport()
-    transport.replies[b"\x14\xFF\x00"] = b"\x99"
+    transport.replies[b"\x14\xff\x00"] = b"\x99"
     with pytest.raises(ValueError, match="Unexpected DTC clear response"):
         nissan.clear_module_dtcs(transport, EPS)
 

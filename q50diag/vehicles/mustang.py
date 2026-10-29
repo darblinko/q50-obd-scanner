@@ -29,14 +29,17 @@ S550_MODULES: tuple[ModuleAddress, ...] = (
     ModuleAddress("HVAC", 0x733, 0x73B, "uds", "Body", "Climate control"),
 )
 SIM_MODULES = frozenset({"PCM", "ABS", "IPC", "BCM", "PSCM", "RCM", "APIM"})
-DISCOVERY_PROBES = (b"\x3E\x00", b"\x22\xF1\x90")
+DISCOVERY_PROBES = (b"\x3e\x00", b"\x22\xf1\x90")
 EXPLORER_SERVICES = ((0x22, "F400", "F4FF"),)
-FAVORITES = ("obd.01.0D", "obd.01.0C", "obd.01.05", "obd.01.04", "obd.01.11", "PCM.22.03EC",
-             "obd.01.06", "obd.01.07")
-GATEWAY_NOTE = ("S550 broadcast traffic at the OBD port has not been characterised in this app; "
-                "frames are shown raw and none are decoded.")
-CONNECT_NOTE = ("Ford UDS. No public S550 DID table exists: PCM DIDs beyond the OBD-II PIDs are "
-                "inferred or unverified (see each parameter's description). No Steering page.")
+FAVORITES = ("obd.01.0D", "obd.01.0C", "obd.01.05", "obd.01.04", "obd.01.11", "PCM.22.03EC", "obd.01.06", "obd.01.07")
+GATEWAY_NOTE = (
+    "S550 broadcast traffic at the OBD port has not been characterised in this app; "
+    "frames are shown raw and none are decoded."
+)
+CONNECT_NOTE = (
+    "Ford UDS. No public S550 DID table exists: PCM DIDs beyond the OBD-II PIDs are "
+    "inferred or unverified (see each parameter's description). No Steering page."
+)
 LOW_VOLTAGE_NOTE = "Low: modules may drop off the bus or set low-voltage codes"
 DATA_NOTES = """
 - Modules (response = request + 8): PCM 7E0, ABS 760, IPC 720, PSCM 730, RCM 737, BCM 726,
@@ -64,24 +67,49 @@ def gt_parameters(module: ModuleAddress) -> list[ParameterDef]:
 
 def _profile(key: str, name: str, short_name: str, year: int, parameters, vin: str, car_note: str) -> VehicleProfile:
     return VehicleProfile(
-        key=key, name=name, short_name=short_name, make="Ford", year=year, modules=S550_MODULES,
-        obd_module="PCM", diag=ford, module_parameters=parameters, broadcast_signals={},
-        decode_frame=_no_signals, discovery_probes=DISCOVERY_PROBES, sweep_protocol="uds",
-        response_offsets=(8,), explorer_services=EXPLORER_SERVICES, has_steering_page=False,
-        default_favorites=FAVORITES, dtc_overlay=FORD_DESCRIPTIONS, sim_modules=SIM_MODULES, sim_vin=vin,
-        prompt_notes=f"- {car_note}\n{DATA_NOTES}", gateway_note=GATEWAY_NOTE, low_voltage_note=LOW_VOLTAGE_NOTE,
+        key=key,
+        name=name,
+        short_name=short_name,
+        make="Ford",
+        year=year,
+        modules=S550_MODULES,
+        obd_module="PCM",
+        diag=ford,
+        module_parameters=parameters,
+        broadcast_signals={},
+        decode_frame=_no_signals,
+        discovery_probes=DISCOVERY_PROBES,
+        sweep_protocol="uds",
+        response_offsets=(8,),
+        explorer_services=EXPLORER_SERVICES,
+        has_steering_page=False,
+        default_favorites=FAVORITES,
+        dtc_overlay=FORD_DESCRIPTIONS,
+        sim_modules=SIM_MODULES,
+        sim_vin=vin,
+        prompt_notes=f"- {car_note}\n{DATA_NOTES}",
+        gateway_note=GATEWAY_NOTE,
+        low_voltage_note=LOW_VOLTAGE_NOTE,
         connect_note=CONNECT_NOTE,
     )
 
 
 MUSTANG_GT350R = _profile(
-    "mustang_gt350r_2016", "2016 Ford Mustang Shelby GT350R", "Mustang GT350R", 2016, gt350r_parameters,
+    "mustang_gt350r_2016",
+    "2016 Ford Mustang Shelby GT350R",
+    "Mustang GT350R",
+    2016,
+    gt350r_parameters,
     "1FASAMPLEXXXXXXX1",
     "2016 Ford Mustang Shelby GT350R (S550): 5.2L Voodoo flat-plane V8, Tremec TR-3160 6-speed manual, "
     "MagneRide dampers (damping module address unknown). Transmission DID 1E1C does not apply.",
 )
 MUSTANG_GT = _profile(
-    "mustang_gt_2017", "2017 Ford Mustang GT", "Mustang GT", 2017, gt_parameters,
+    "mustang_gt_2017",
+    "2017 Ford Mustang GT",
+    "Mustang GT",
+    2017,
+    gt_parameters,
     "1FASAMPLEXXXXXXX2",
     "2017 Ford Mustang GT (S550): 5.0L Coyote V8, either MT-82 6-speed manual or 6R80 6-speed "
     "automatic. PCM DID 1E1C transmission fluid temperature answers only on the automatic.",

@@ -45,9 +45,7 @@ class LiveDataPage(Page):
     title = "Live Data"
     subtitle = "Every supported OBD-II PID, manufacturer module parameter and decoded broadcast signal."
 
-    def __init__(
-        self, ctx: AppContext, parent: QWidget | None = None, favorites_path: Path | None = None
-    ) -> None:
+    def __init__(self, ctx: AppContext, parent: QWidget | None = None, favorites_path: Path | None = None) -> None:
         super().__init__(ctx, parent)
         self._checked: list[str] = []
         self._favorites_path = favorites_path
@@ -70,7 +68,9 @@ class LiveDataPage(Page):
         self.reset_button = button("Reset min/max", "ghost", "Clear the min, max and rate statistics")
         self.poll_button = button("Start polling", "primary")
         self.poll_button.setCheckable(True)
-        self.favorite_button = button("Favorite checked", "ghost", "Add every checked parameter to the dashboard favorites")
+        self.favorite_button = button(
+            "Favorite checked", "ghost", "Add every checked parameter to the dashboard favorites"
+        )
         self.header.add_action(self.rate_label)
         self.header.add_action(self.favorite_button)
         self.header.add_action(self.reset_button)

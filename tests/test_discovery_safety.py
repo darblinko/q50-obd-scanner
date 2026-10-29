@@ -20,4 +20,4 @@ def test_sweep_never_transmits_on_response_ids_and_only_sends_tester_present():
     sent_ids = {tx_id for tx_id, _ in transport.sent}
     assert not sent_ids & response_ids
     sweep_payloads = {payload for tx_id, payload in transport.sent if tx_id not in known_tx}
-    assert sweep_payloads == {b"\x3E\x00"}
+    assert sweep_payloads == {b"\x3e\x00"}

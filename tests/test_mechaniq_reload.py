@@ -50,8 +50,14 @@ class FakeWindow:
         (["q50diag/core/types.py"], "restart", None, (), ("q50diag/core/types.py",), ()),
         (["q50diag/mechaniq/changes.py"], "restart", None, (), ("q50diag/mechaniq/changes.py",), ()),
         (["q50diag/protocol/no_such_module.py"], "restart", None, (), ("q50diag/protocol/no_such_module.py",), ()),
-        (["docs/notes.md", "tests/test_dtc.py", "pyproject.toml"], "none", None, (), (),
-         ("docs/notes.md", "pyproject.toml", "tests/test_dtc.py")),
+        (
+            ["docs/notes.md", "tests/test_dtc.py", "pyproject.toml"],
+            "none",
+            None,
+            (),
+            (),
+            ("docs/notes.md", "pyproject.toml", "tests/test_dtc.py"),
+        ),
         ([], "none", None, (), (), ()),
     ],
 )
@@ -101,21 +107,24 @@ def _write_tree(root: Path, files: dict[str, str]) -> None:
 
 
 def test_import_graph_rules(tmp_path):
-    _write_tree(tmp_path, {
-        "q50diag/__init__.py": "",
-        "q50diag/data/__init__.py": "",
-        "q50diag/data/table.py": "X = 1\n",
-        "q50diag/protocol/__init__.py": "",
-        "q50diag/protocol/names.py": "from q50diag.data.table import X\n",
-        "q50diag/protocol/module_ref.py": "from q50diag.data import table\n",
-        "q50diag/protocol/lazy.py": "def f():\n    from q50diag.data.table import X\n    return X\n",
-        "q50diag/protocol/typing_only.py": (
-            "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from q50diag.data.table import X\n"
-        ),
-        "q50diag/protocol/relative.py": "from ..data.table import X\n",
-        "q50diag/protocol/second.py": "from q50diag.protocol.names import X\n",
-        "q50diag/session.py": "from q50diag.protocol.names import X\n",
-    })
+    _write_tree(
+        tmp_path,
+        {
+            "q50diag/__init__.py": "",
+            "q50diag/data/__init__.py": "",
+            "q50diag/data/table.py": "X = 1\n",
+            "q50diag/protocol/__init__.py": "",
+            "q50diag/protocol/names.py": "from q50diag.data.table import X\n",
+            "q50diag/protocol/module_ref.py": "from q50diag.data import table\n",
+            "q50diag/protocol/lazy.py": "def f():\n    from q50diag.data.table import X\n    return X\n",
+            "q50diag/protocol/typing_only.py": (
+                "from typing import TYPE_CHECKING\nif TYPE_CHECKING:\n    from q50diag.data.table import X\n"
+            ),
+            "q50diag/protocol/relative.py": "from ..data.table import X\n",
+            "q50diag/protocol/second.py": "from q50diag.protocol.names import X\n",
+            "q50diag/session.py": "from q50diag.protocol.names import X\n",
+        },
+    )
     plan = classify(["q50diag/data/table.py"], tmp_path)
     assert plan.live_modules == (
         "q50diag.data.table",
@@ -280,7 +289,7 @@ def test_transport_reload_reconnects_same_port_and_keeps_recording(ctx, tmp_path
     assert events == ["Code change abc: probe", RECONNECT_MARKER]
     marker_index = next(i for i, row in enumerate(rows) if row["name"] == RECONNECT_MARKER)
     assert any(row["key"] == RPM.key for row in rows[:marker_index])
-    assert any(row["key"] == RPM.key for row in rows[marker_index + 1:])
+    assert any(row["key"] == RPM.key for row in rows[marker_index + 1 :])
 
 
 def test_transport_reload_when_disconnected_only_reloads(ctx):

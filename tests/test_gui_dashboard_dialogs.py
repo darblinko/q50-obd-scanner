@@ -21,7 +21,9 @@ def slot_keys(layout) -> list:
 
 def make_prefs(preset: str = "2x3", keys=("obd.01.0C", "obd.01.0D")) -> Preferences:
     slots = tuple(SlotAssignment(key) if key else None for key in keys)
-    return Preferences(favorites=("obd.01.0C",), layouts=(Layout("default", "Default", preset, slots),), active="default")
+    return Preferences(
+        favorites=("obd.01.0C",), layouts=(Layout("default", "Default", preset, slots),), active="default"
+    )
 
 
 # Sensor picker ------------------------------------------------------------

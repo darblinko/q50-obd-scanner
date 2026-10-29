@@ -91,7 +91,7 @@ def clean_summary(summary: str) -> str:
     """One line, no repeated prefix, at most SUMMARY_CHARS characters."""
     text = " ".join(summary.split())
     if text.lower().startswith(COMMIT_PREFIX.strip()):
-        text = text[len(COMMIT_PREFIX.strip()):].strip()
+        text = text[len(COMMIT_PREFIX.strip()) :].strip()
     return text[:SUMMARY_CHARS].rstrip()
 
 
@@ -126,9 +126,15 @@ def git_available() -> bool:
         return False
     if sys.platform == "darwin" and git == "/usr/bin/git":
         try:
-            return subprocess.run(
-                ["xcode-select", "-p"], stdin=subprocess.DEVNULL, capture_output=True, timeout=GIT_TIMEOUT_S,
-            ).returncode == 0
+            return (
+                subprocess.run(
+                    ["xcode-select", "-p"],
+                    stdin=subprocess.DEVNULL,
+                    capture_output=True,
+                    timeout=GIT_TIMEOUT_S,
+                ).returncode
+                == 0
+            )
         except (OSError, subprocess.TimeoutExpired):
             return False
     return True
@@ -217,7 +223,11 @@ class ChangeLog:
         else:
             status = RELOAD_FAILED if reload_error else APPLIED
             self._forget(relative)
-        notes = [report, git_error, "" if commit or git_error else "No uncommitted changes in these files; nothing committed."]
+        notes = [
+            report,
+            git_error,
+            "" if commit or git_error else "No uncommitted changes in these files; nothing committed.",
+        ]
         detail = "\n".join(note for note in notes if note)
         entry = self._entry(entry_id, summary, relative, status, reload_kind, commit, tail(output), detail)
         return self._record(entry)
@@ -232,7 +242,9 @@ class ChangeLog:
             try:
                 text = absolute.relative_to(self.project_root).as_posix()
             except ValueError:
-                return tuple(relative), f"{item} is outside the project root {self.project_root}; list project files only."
+                return tuple(
+                    relative
+                ), f"{item} is outside the project root {self.project_root}; list project files only."
             if not absolute.exists() and not self._tracked(text):
                 return tuple(relative), f"{text} does not exist and is not tracked by git; check the path."
             if text not in relative:
@@ -248,9 +260,13 @@ class ChangeLog:
         selected = self.test_selector(files, self.project_root) if self.test_selector else []
         try:
             result = subprocess.run(
-                self.test_command + selected, cwd=self.project_root, stdin=subprocess.DEVNULL,
-                capture_output=True, text=True,
-                timeout=self.test_timeout_s, env=env,
+                self.test_command + selected,
+                cwd=self.project_root,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=self.test_timeout_s,
+                env=env,
             )
         except subprocess.TimeoutExpired as exc:
             partial = exc.stdout.decode(errors="replace") if isinstance(exc.stdout, bytes) else (exc.stdout or "")
@@ -282,8 +298,16 @@ class ChangeLog:
             return self._record(self._entry(new_id, f"undo {entry_id}", (), REJECTED, detail=detail, undoes=entry_id))
         summary = f"undo {entry_id}: {target.summary}"
         if any(e.undoes == entry_id and e.status == UNDO for e in entries):
-            return self._record(self._entry(new_id, summary, target.files, REJECTED,
-                                            detail=f"Change {entry_id} was already undone.", undoes=entry_id))
+            return self._record(
+                self._entry(
+                    new_id,
+                    summary,
+                    target.files,
+                    REJECTED,
+                    detail=f"Change {entry_id} was already undone.",
+                    undoes=entry_id,
+                )
+            )
         commit, error = self._revert(target)
         if error:
             return self._record(self._entry(new_id, summary, target.files, UNDO_FAILED, detail=error, undoes=entry_id))
@@ -307,7 +331,10 @@ class ChangeLog:
         if patch.stdout:
             applied = self._git_bytes("apply", "-R", "-", stdin=patch.stdout)
             if applied.returncode != 0:
-                return "", f"Reverse patch did not apply, nothing changed: {applied.stderr.decode(errors='replace').strip()}"
+                return (
+                    "",
+                    f"Reverse patch did not apply, nothing changed: {applied.stderr.decode(errors='replace').strip()}",
+                )
         message = f'Revert "{COMMIT_PREFIX}{target.summary}"\n\nThis reverts commit {target.commit}.'
         commit, error = self._commit(message, files)
         if not commit and not error:
@@ -321,8 +348,13 @@ class ChangeLog:
         env = {**os.environ, "GIT_TERMINAL_PROMPT": "0", "GIT_EDITOR": "true"}
         try:
             return subprocess.run(
-                ["git", *args], cwd=self.project_root, stdin=subprocess.DEVNULL, capture_output=True, text=True,
-                timeout=GIT_TIMEOUT_S, env=env,
+                ["git", *args],
+                cwd=self.project_root,
+                stdin=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
+                timeout=GIT_TIMEOUT_S,
+                env=env,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
             return subprocess.CompletedProcess(["git", *args], 1, "", f"git {args[0]} failed: {exc}")
@@ -332,8 +364,9 @@ class ChangeLog:
             return subprocess.CompletedProcess(["git", *args], 1, b"", NO_GIT.encode())
         try:
             source = {"input": stdin} if stdin is not None else {"stdin": subprocess.DEVNULL}
-            return subprocess.run(["git", *args], cwd=self.project_root, capture_output=True,
-                                  timeout=GIT_TIMEOUT_S, **source)
+            return subprocess.run(
+                ["git", *args], cwd=self.project_root, capture_output=True, timeout=GIT_TIMEOUT_S, **source
+            )
         except (OSError, subprocess.TimeoutExpired) as exc:
             return subprocess.CompletedProcess(["git", *args], 1, b"", f"git {args[0]} failed: {exc}".encode())
 
@@ -387,10 +420,21 @@ class ChangeLog:
             self._failed.pop(path, None)
 
     # Records ----------------------------------------------------------------
-    def _entry(self, entry_id: str, summary: str, files: Sequence[str], status: str, reload_kind: str = "none",
-               commit: str = "", test_tail: str = "", detail: str = "", undoes: str = "") -> ChangeEntry:
-        return ChangeEntry(entry_id, _now(), summary, tuple(files), status, reload_kind, commit, test_tail,
-                           detail, undoes)
+    def _entry(
+        self,
+        entry_id: str,
+        summary: str,
+        files: Sequence[str],
+        status: str,
+        reload_kind: str = "none",
+        commit: str = "",
+        test_tail: str = "",
+        detail: str = "",
+        undoes: str = "",
+    ) -> ChangeEntry:
+        return ChangeEntry(
+            entry_id, _now(), summary, tuple(files), status, reload_kind, commit, test_tail, detail, undoes
+        )
 
     def _record(self, entry: ChangeEntry) -> ChangeEntry:
         try:

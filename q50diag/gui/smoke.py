@@ -90,7 +90,9 @@ class SmokeRun(QObject):
         self.ctx.session.raw_command("ATRV")
         modules = self.page("Modules")
         vehicle = self.ctx.vehicle
-        target, scan_range = ("EPS", ("00", "3F")) if vehicle.has_steering_page else (vehicle.obd_module, ("F400", "F43F"))
+        target, scan_range = (
+            ("EPS", ("00", "3F")) if vehicle.has_steering_page else (vehicle.obd_module, ("F400", "F43F"))
+        )
         if modules.select_module(target):
             explorer = modules.explorer
             modules.tabs.setCurrentWidget(explorer)

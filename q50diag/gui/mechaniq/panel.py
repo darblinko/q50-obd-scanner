@@ -36,8 +36,9 @@ class VerticalStripButton(QPushButton):
         painter.translate(0, self.height())
         painter.rotate(-90)
         area = QRect(0, 0, self.height(), self.width())
-        painter.drawText(area.adjusted(0, 0, -16, 0), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
-                         self.text())
+        painter.drawText(
+            area.adjusted(0, 0, -16, 0), Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter, self.text()
+        )
         painter.end()
 
 
@@ -52,8 +53,9 @@ class MechaniqPanel(QWidget):
         super().__init__(parent)
         self.setObjectName("MechaniqPanel")
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-        self.setStyleSheet(f"QWidget#MechaniqPanel {{ background: {theme.BG_DEEP}; "
-                           f"border-left: 1px solid {theme.BORDER}; }}")
+        self.setStyleSheet(
+            f"QWidget#MechaniqPanel {{ background: {theme.BG_DEEP}; border-left: 1px solid {theme.BORDER}; }}"
+        )
         self.controller = controller
         self.model = controller.model
         self.collapsed = False

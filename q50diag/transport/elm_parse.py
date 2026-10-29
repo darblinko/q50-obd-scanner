@@ -11,8 +11,7 @@ from q50diag.core.transport import AdapterReplyError, NegativeResponse, NoRespon
 def response_lines(text: str, command: str = "") -> list[str]:
     echo = "".join(command.upper().split())
     lines = re.split(r"[\r\n>]", text)
-    return [line.strip() for line in lines if line.strip()
-            and "".join(line.upper().split()) != echo]
+    return [line.strip() for line in lines if line.strip() and "".join(line.upper().split()) != echo]
 
 
 def check_status(line: str, allow_stopped: bool = False) -> None:
@@ -21,8 +20,16 @@ def check_status(line: str, allow_stopped: bool = False) -> None:
         raise NoResponse("ELM: NO DATA")
     if "LV RESET" in upper:
         raise TransportError(f"ELM: {line.strip()} (adapter reset itself)")
-    errors = ("CAN ERROR", "BUFFER FULL", "UNABLE TO CONNECT", "BUS ERROR",
-              "DATA ERROR", "RX ERROR", "FB ERROR", "OUT OF MEMORY")
+    errors = (
+        "CAN ERROR",
+        "BUFFER FULL",
+        "UNABLE TO CONNECT",
+        "BUS ERROR",
+        "DATA ERROR",
+        "RX ERROR",
+        "FB ERROR",
+        "OUT OF MEMORY",
+    )
     if upper == "?" or any(error in upper for error in errors):
         raise AdapterReplyError(f"ELM: {line.strip()}")
     if upper == "STOPPED" and not allow_stopped:
@@ -61,7 +68,7 @@ def reassemble_frames(frames: Iterable[tuple[int, bytes]]) -> dict[int, list[byt
             size = data[0] & 15
             if not 1 <= size <= 7 or len(data) <= size:
                 raise NoResponse("Truncated or invalid ISO-TP single frame")
-            complete.setdefault(can_id, []).append(data[1:1 + size])
+            complete.setdefault(can_id, []).append(data[1 : 1 + size])
         elif kind == 1:
             if len(data) < 8:
                 raise NoResponse("Truncated ISO-TP first frame")
@@ -133,8 +140,7 @@ def console_command(line: str) -> tuple[str, bytes | None]:
     if not compact:
         raise RequestBlocked("Empty console command would repeat the last request")
     if compact.startswith(("AT", "ST", "VT")):
-        if compact.startswith(("ATPP", "ATBRD", "ATBRT", "STP", "STBR", "STWBR", "STSBR",
-                               "STRSTNVM", "VTUPDATE")):
+        if compact.startswith(("ATPP", "ATBRD", "ATBRT", "STP", "STBR", "STWBR", "STSBR", "STRSTNVM", "VTUPDATE")):
             raise RequestBlocked("Adapter programming and baud changes are blocked")
         return compact, None
     try:

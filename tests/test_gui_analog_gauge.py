@@ -51,8 +51,9 @@ def test_dial_mode_with_valid_range(rpm):
     assert rpm.is_settled()
 
 
-@pytest.mark.parametrize("low, high", [(None, None), (0, None), (None, 100), (100, 0), (5, 5),
-                                       (0, math.inf), (math.nan, 10)])
+@pytest.mark.parametrize(
+    "low, high", [(None, None), (0, None), (None, 100), (100, 0), (5, 5), (0, math.inf), (math.nan, 10)]
+)
 def test_digital_mode_without_valid_range(gauge, low, high):
     gauge.set_parameter("Coolant temperature", "degC", low, high)
     assert gauge.mode() == "digital"
@@ -177,8 +178,14 @@ def test_clicked_on_left_release(gauge):
     hits = []
     gauge.clicked.connect(lambda: hits.append(1))
     for button in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
-        event = QMouseEvent(QMouseEvent.Type.MouseButtonRelease, QPointF(20, 20), QPointF(20, 20),
-                            button, Qt.MouseButton.NoButton, Qt.KeyboardModifier.NoModifier)
+        event = QMouseEvent(
+            QMouseEvent.Type.MouseButtonRelease,
+            QPointF(20, 20),
+            QPointF(20, 20),
+            button,
+            Qt.MouseButton.NoButton,
+            Qt.KeyboardModifier.NoModifier,
+        )
         gauge.mouseReleaseEvent(event)
     assert hits == [1]
 

@@ -78,7 +78,10 @@ class IdStats:
 
 class BusMonitorPage(Page):
     title = "Bus Monitor"
-    subtitle = "Passive capture of broadcast CAN traffic (ATMA). Frames captured while polling broadcast signals appear here too."
+    subtitle = (
+        "Passive capture of broadcast CAN traffic (ATMA). "
+        "Frames captured while polling broadcast signals appear here too."
+    )
 
     def __init__(self, ctx: AppContext, parent: QWidget | None = None) -> None:
         super().__init__(ctx, parent)
@@ -276,7 +279,5 @@ class BusMonitorPage(Page):
 
     def _update_summary(self, now: float) -> None:
         total_rate = sum(entry.rate(now) for entry in self.stats.values())
-        self.summary.setText(
-            f"{self._total_frames} frames, {len(self.stats)} ids, {total_rate:.0f} frames/s"
-        )
+        self.summary.setText(f"{self._total_frames} frames, {len(self.stats)} ids, {total_rate:.0f} frames/s")
         theme.set_state(self.summary, "accent" if total_rate > 0 else "idle")

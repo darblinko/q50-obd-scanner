@@ -79,21 +79,29 @@ def _trim(value: float) -> bytes:
 
 
 class SimulatedTransport(Transport):
-    def __init__(self, seed: int = 0, stiff_steering_events: bool = True, request_latency_s: float = 0.0,
-                 vehicle: VehicleProfile | None = None, bus: str = "hs"):
+    def __init__(
+        self,
+        seed: int = 0,
+        stiff_steering_events: bool = True,
+        request_latency_s: float = 0.0,
+        vehicle: VehicleProfile | None = None,
+        bus: str = "hs",
+    ):
         self.stiff_steering_events = stiff_steering_events
         self.request_latency_s = request_latency_s
         self.vehicle = vehicle or default_vehicle()
         self.bus = bus
         self.vin = self.vehicle.sim_vin
-        self.modules = tuple(module for module in self.vehicle.modules
-                             if module.name in self.vehicle.sim_modules and module.bus == bus)
+        self.modules = tuple(
+            module for module in self.vehicle.modules if module.name in self.vehicle.sim_modules and module.bus == bus
+        )
         self._ford = self.vehicle.make == "Ford"
         self._engine = self.vehicle.obd_module
         self._obd_names = {name for name in (self._engine, "TCM") if name in self.vehicle.sim_modules}
         engine = self.vehicle.module(self._engine)
         self._automatic = engine is not None and any(
-            p.request == b"\x22\x1e\x1c" for p in self.vehicle.module_parameters(engine))
+            p.request == b"\x22\x1e\x1c" for p in self.vehicle.module_parameters(engine)
+        )
         self.connection_generation = 0
         self._phase = random.Random(seed).uniform(0, 2 * math.pi)
         self._start = time.monotonic()
@@ -105,8 +113,11 @@ class SimulatedTransport(Transport):
         self._stored = [b"\x01\x71"]
         self._pending = [b"\x03\x00"]
         self._permanent = [b"\x01\x71"]
-        self._module_codes = ({name: list(codes) for name, codes in sim_ford.MODULE_CODES.items()} if self._ford
-                              else {"EPS": [b"\x56\x04\x20"], "ABS": [b"\xD0\x00\x01"]})
+        self._module_codes = (
+            {name: list(codes) for name, codes in sim_ford.MODULE_CODES.items()}
+            if self._ford
+            else {"EPS": [b"\x56\x04\x20"], "ABS": [b"\xd0\x00\x01"]}
+        )
         self._freeze = {pid: value for pid, value in self._pid_values(self._sample(35)).items() if pid != 1}
 
     def open(self) -> AdapterInfo:
@@ -115,8 +126,9 @@ class SimulatedTransport(Transport):
             self._start = time.monotonic()
             self._tx_id, self._rx_id = 0x7DF, None
             self.connection_generation += 1
-            return AdapterInfo("simulated", "ELM327 v2.2 (simulated)", self._description(),
-                               self._protocol_text(), self.read_voltage())
+            return AdapterInfo(
+                "simulated", "ELM327 v2.2 (simulated)", self._description(), self._protocol_text(), self.read_voltage()
+            )
 
     def _description(self) -> str:
         if self.vehicle is default_vehicle():
@@ -160,47 +172,88 @@ class SimulatedTransport(Transport):
         target = 3 + abs(torque) * (9 if speed < 30 else 4)
         stiff = self.stiff_steering_events and elapsed >= 60 and elapsed % 60 < 8
         manifold = 32 + throttle * 0.8 if phase < 15 or phase >= 70 else 55 + load * 1.8
-        return DriveState(elapsed, rpm, speed, load, throttle,
-                          22 + 70 * (1 - math.exp(-elapsed / 120)), 28 + load / 6,
-                          3.5 + rpm * load / 3500, manifold, voltage, angle, torque,
-                          0.15 if stiff else target * (0.97 + 0.02 * wave), target,
-                          11.2 + 0.08 * wave if stiff else voltage - 0.15,
-                          28 + 35 * (1 - math.exp(-elapsed / 180)),
-                          0 if speed < 1 else min(7, 1 + int(speed / 15)), stiff)
+        return DriveState(
+            elapsed,
+            rpm,
+            speed,
+            load,
+            throttle,
+            22 + 70 * (1 - math.exp(-elapsed / 120)),
+            28 + load / 6,
+            3.5 + rpm * load / 3500,
+            manifold,
+            voltage,
+            angle,
+            torque,
+            0.15 if stiff else target * (0.97 + 0.02 * wave),
+            target,
+            11.2 + 0.08 * wave if stiff else voltage - 0.15,
+            28 + 35 * (1 - math.exp(-elapsed / 180)),
+            0 if speed < 1 else min(7, 1 + int(speed / 15)),
+            stiff,
+        )
 
     def _pid_values(self, state: DriveState) -> dict[int, bytes]:
         wave = math.sin(state.elapsed + self._phase)
         rich = state.load > 60
         ratio = 0.84 if rich else 1.01 + 0.015 * wave
         since_clear = 18000 + state.elapsed if self._cleared_at is None else state.elapsed - self._cleared_at
-        readiness = b"\x07\xE5\x04" if self._cleared_at is None else b"\x77\xE5\xE5"
+        readiness = b"\x07\xe5\x04" if self._cleared_at is None else b"\x77\xe5\xe5"
         values = {
             1: _byte((128 if self._stored else 0) + len(self._stored)) + readiness,
-            2: self._stored[0] if self._stored else b"\x00\x00", 3: b"\x02\x02",
-            4: _percent(state.load), 5: _byte(state.coolant + 40),
-            6: _trim(7 + 3 * wave), 7: _trim(10), 8: _trim(1 + 2 * wave), 9: _trim(2),
-            0x0A: _byte(400 / 3), 0x0B: _byte(state.manifold), 0x0C: _u16(state.rpm * 4),
-            0x0D: _byte(state.speed), 0x0E: _byte((16 + 10 * wave + 64) * 2),
-            0x0F: _byte(state.intake + 40), 0x10: _u16(state.maf * 100),
-            0x11: _percent(state.throttle), 0x13: b"\x33", 0x14: _byte(100 + 70 * wave) + _trim(7),
-            0x15: b"\x90\xFF", 0x18: _byte(100 + 60 * wave) + _trim(2), 0x19: b"\x8C\xFF",
-            0x1C: b"\x01", 0x1F: _u16(state.elapsed), 0x21: _u16(24),
+            2: self._stored[0] if self._stored else b"\x00\x00",
+            3: b"\x02\x02",
+            4: _percent(state.load),
+            5: _byte(state.coolant + 40),
+            6: _trim(7 + 3 * wave),
+            7: _trim(10),
+            8: _trim(1 + 2 * wave),
+            9: _trim(2),
+            0x0A: _byte(400 / 3),
+            0x0B: _byte(state.manifold),
+            0x0C: _u16(state.rpm * 4),
+            0x0D: _byte(state.speed),
+            0x0E: _byte((16 + 10 * wave + 64) * 2),
+            0x0F: _byte(state.intake + 40),
+            0x10: _u16(state.maf * 100),
+            0x11: _percent(state.throttle),
+            0x13: b"\x33",
+            0x14: _byte(100 + 70 * wave) + _trim(7),
+            0x15: b"\x90\xff",
+            0x18: _byte(100 + 60 * wave) + _trim(2),
+            0x19: b"\x8c\xff",
+            0x1C: b"\x01",
+            0x1F: _u16(state.elapsed),
+            0x21: _u16(24),
             0x23: _u16((4000 + state.load * 130) / 10),
             0x24: _u16(ratio * 32768) + _u16(3.2 * 8192),
             0x28: _u16(ratio * 32768) + _u16(3.15 * 8192),
-            0x2C: b"\x00", 0x2D: b"\x80", 0x2E: _percent(20),
-            0x2F: _percent(max(0, 68 - state.elapsed / 2000)), 0x30: _byte(0 if self._cleared_at is not None else 12),
-            0x31: _u16(since_clear / 90), 0x33: b"\x65",
+            0x2C: b"\x00",
+            0x2D: b"\x80",
+            0x2E: _percent(20),
+            0x2F: _percent(max(0, 68 - state.elapsed / 2000)),
+            0x30: _byte(0 if self._cleared_at is not None else 12),
+            0x31: _u16(since_clear / 90),
+            0x33: b"\x65",
             0x3C: _u16((450 + state.load * 3 + 40) * 10),
             0x3D: _u16((445 + state.load * 3 + 40) * 10),
-            0x42: _u16(state.voltage * 1000), 0x43: _u16(state.load * 255 / 100),
-            0x44: _u16(ratio * 32768), 0x45: _percent(state.throttle), 0x46: _byte(62),
-            0x49: _percent(max(0, state.throttle - 10)), 0x4A: _percent(max(0, state.throttle - 10)),
-            0x4C: _percent(state.throttle), 0x4D: _u16(10 if self._stored else 0),
-            0x4E: _u16(since_clear / 60), 0x51: b"\x01", 0x52: _percent(10),
+            0x42: _u16(state.voltage * 1000),
+            0x43: _u16(state.load * 255 / 100),
+            0x44: _u16(ratio * 32768),
+            0x45: _percent(state.throttle),
+            0x46: _byte(62),
+            0x49: _percent(max(0, state.throttle - 10)),
+            0x4A: _percent(max(0, state.throttle - 10)),
+            0x4C: _percent(state.throttle),
+            0x4D: _u16(10 if self._stored else 0),
+            0x4E: _u16(since_clear / 60),
+            0x51: b"\x01",
+            0x52: _percent(10),
             0x5C: _byte(22 + 80 * (1 - math.exp(-state.elapsed / 180)) + 40),
             0x5E: _u16((state.maf / (14.7 * ratio) / 0.745 * 3.6) * 20),
-            0x61: _byte(125 + state.load), 0x62: _byte(125 + state.load - 3), 0x63: _u16(400),
+            0x61: _byte(125 + state.load),
+            0x62: _byte(125 + state.load - 3),
+            0x63: _u16(400),
         }
         return values
 
@@ -215,7 +268,9 @@ class SimulatedTransport(Transport):
     def _obd(self, module: ModuleAddress, payload: bytes, state: DriveState) -> bytes:
         mode = payload[0]
         if mode in (3, 7, 10) and len(payload) == 1:
-            codes = {3: self._stored, 7: self._pending, 10: self._permanent}[mode] if module.name == self._engine else []
+            codes = (
+                {3: self._stored, 7: self._pending, 10: self._permanent}[mode] if module.name == self._engine else []
+            )
             return bytes((mode + 0x40, len(codes))) + b"".join(codes)
         if mode == 4 and len(payload) == 1:
             self._stored.clear()
@@ -251,26 +306,54 @@ class SimulatedTransport(Transport):
         local = {0x83: part}
         dids = {0xF187: part, 0xF18C: f"SIM{module.tx_id:03X}0001".encode(), 0xF190: VIN.encode()}
         if module.name == "ECM":
-            dids.update({0x1101: _byte(state.coolant + 50), 0x1201: _u16(state.rpm / 12.5),
-                         0x1209: _u16(state.maf * 100), 0x120D: _u16((0.5 + state.throttle * 0.04) / 0.005),
-                         0x120E: _u16((0.25 + state.throttle * 0.02) / 0.005), 0x121A: _u16(state.speed * 10)})
+            dids.update(
+                {
+                    0x1101: _byte(state.coolant + 50),
+                    0x1201: _u16(state.rpm / 12.5),
+                    0x1209: _u16(state.maf * 100),
+                    0x120D: _u16((0.5 + state.throttle * 0.04) / 0.005),
+                    0x120E: _u16((0.25 + state.throttle * 0.02) / 0.005),
+                    0x121A: _u16(state.speed * 10),
+                }
+            )
         elif module.name == "ABS":
-            dids.update({0x1115: _percent(state.throttle), 0x1208: round(state.angle * 10).to_bytes(2, "big", signed=True),
-                         0x1209: _u16(100 if state.elapsed % 90 >= 70 else 0)})
+            dids.update(
+                {
+                    0x1115: _percent(state.throttle),
+                    0x1208: round(state.angle * 10).to_bytes(2, "big", signed=True),
+                    0x1209: _u16(100 if state.elapsed % 90 >= 70 else 0),
+                }
+            )
         elif module.name == "METER":
-            local.update({1: round(85432 + state.elapsed / 180).to_bytes(3, "big") + _byte(state.speed),
-                          2: _byte(35 * 4) + _byte(state.coolant + 40), 3: _u16(state.voltage * 100)})
+            local.update(
+                {
+                    1: round(85432 + state.elapsed / 180).to_bytes(3, "big") + _byte(state.speed),
+                    2: _byte(35 * 4) + _byte(state.coolant + 40),
+                    3: _u16(state.voltage * 100),
+                }
+            )
         elif module.name == "EPS":
             torque = round(state.torque * 100).to_bytes(2, "big", signed=True)
-            values = (torque, _u16(state.motor_current * 10), _u16(state.target_current * 10),
-                      _u16(state.eps_voltage * 100), _byte(state.motor_temperature + 40))
+            values = (
+                torque,
+                _u16(state.motor_current * 10),
+                _u16(state.target_current * 10),
+                _u16(state.eps_voltage * 100),
+                _byte(state.motor_temperature + 40),
+            )
             local[1] = self._eps_record(state)
             local.update(dict(enumerate(values[1:], 2)))
             dids.update(dict(enumerate(values, 0x1001)))
         elif module.name == "TCM":
-            local.update({1: _byte(state.gear) + _byte(state.coolant + 40), 2: _byte(state.gear),
-                          0x10: _u16(state.speed * 10), 0x11: _u16(state.rpm),
-                          0x12: _byte(45 + state.coolant / 2)})
+            local.update(
+                {
+                    1: _byte(state.gear) + _byte(state.coolant + 40),
+                    2: _byte(state.gear),
+                    0x10: _u16(state.speed * 10),
+                    0x11: _u16(state.rpm),
+                    0x12: _byte(45 + state.coolant / 2),
+                }
+            )
         return local, dids
 
     @staticmethod
@@ -289,25 +372,25 @@ class SimulatedTransport(Transport):
         if self._ford:
             return self._ford_diagnostic(module, payload, state)
         service = payload[0]
-        if payload in (b"\x10\xC0", b"\x10\x81", b"\x10\x01", b"\x10\x03", b"\x10\x89"):
+        if payload in (b"\x10\xc0", b"\x10\x81", b"\x10\x01", b"\x10\x03", b"\x10\x89"):
             return b"\x50" + payload[1:]
-        if payload == b"\x3E\x00":
-            return b"\x7E\x00"
+        if payload == b"\x3e\x00":
+            return b"\x7e\x00"
         codes = self._module_codes.get(module.name, [])
         if module.name == "ECM":
             codes = [code + b"\x01" for code in self._stored]
-        if payload == b"\x18\x00\xFF\x00":
+        if payload == b"\x18\x00\xff\x00":
             return bytes((0x58, len(codes))) + b"".join(codes)
-        if payload == b"\x19\x02\xFF":
-            return b"\x59\x02\xFF" + b"".join(code[:2] + b"\x00" + code[2:] for code in codes)
-        if payload in (b"\x14\xFF\x00", b"\x14\xFF\xFF\xFF"):
+        if payload == b"\x19\x02\xff":
+            return b"\x59\x02\xff" + b"".join(code[:2] + b"\x00" + code[2:] for code in codes)
+        if payload in (b"\x14\xff\x00", b"\x14\xff\xff\xff"):
             self._module_codes[module.name] = []
             if module.name == "ECM":
                 self._obd(module, b"\x04", state)
             return b"\x54"
         local, dids = self._identifiers(module, state)
         if service == 0x1A and payload[1:] in (b"\x81", b"\x87"):
-            return b"\x5A" + payload[1:] + local[0x83]
+            return b"\x5a" + payload[1:] + local[0x83]
         table = local if service == 0x21 else dids
         expected_size = 2 if service == 0x21 else 3
         if service in (0x21, 0x22) and len(payload) == expected_size:
@@ -319,13 +402,16 @@ class SimulatedTransport(Transport):
     def _ford_diagnostic(self, module: ModuleAddress, payload: bytes, state: DriveState) -> bytes:
         service = payload[0]
         if payload in (b"\x10\x01", b"\x10\x03"):
-            return b"\x50" + payload[1:] + b"\x00\x32\x01\xF4"
-        if payload == b"\x3E\x00":
-            return b"\x7E\x00"
+            return b"\x50" + payload[1:] + b"\x00\x32\x01\xf4"
+        if payload == b"\x3e\x00":
+            return b"\x7e\x00"
         if payload[:2] == b"\x19\x02" and len(payload) == 3:
-            return b"\x59\x02\xFF" + b"".join(code[:2] + b"\x00" + bytes((code[2] & payload[2],))
-                                              for code in self._ford_codes(module) if code[2] & payload[2])
-        if payload == b"\x14\xFF\xFF\xFF":
+            return b"\x59\x02\xff" + b"".join(
+                code[:2] + b"\x00" + bytes((code[2] & payload[2],))
+                for code in self._ford_codes(module)
+                if code[2] & payload[2]
+            )
+        if payload == b"\x14\xff\xff\xff":
             self._module_codes[module.name] = []
             if module.name == self._engine:
                 self._obd(module, b"\x04", state)
@@ -345,8 +431,9 @@ class SimulatedTransport(Transport):
             return [code + bytes((sim_ford.PCM_DTC_STATUS,)) for code in self._stored]
         return self._module_codes.get(module.name, [])
 
-    def request(self, tx_id: int, rx_id: int, payload: bytes, timeout_s: float = 1.0,
-                allow_clear: bool = False) -> bytes:
+    def request(
+        self, tx_id: int, rx_id: int, payload: bytes, timeout_s: float = 1.0, allow_clear: bool = False
+    ) -> bytes:
         check_request_allowed(payload, allow_clear)
         if self.request_latency_s:
             time.sleep(self.request_latency_s)
@@ -391,8 +478,10 @@ class SimulatedTransport(Transport):
             self._require_open()
             if payload is not None:
                 if self._tx_id == 0x7DF:
-                    return "\n".join(f"{can_id:03X} {data.hex(' ').upper()}"
-                                     for can_id, data in self.request_functional(payload).items())
+                    return "\n".join(
+                        f"{can_id:03X} {data.hex(' ').upper()}"
+                        for can_id, data in self.request_functional(payload).items()
+                    )
                 module = next((module for module in self.modules if module.tx_id == self._tx_id), None)
                 if module is None:
                     raise NoResponse(f"No simulated module at {self._tx_id:03X}")
@@ -429,8 +518,9 @@ class SimulatedTransport(Transport):
             return _u16(state.rpm * 4) + _u16(state.speed * 100) + bytes(4)
         return _u16(state.voltage * 100) + _byte(state.coolant + 40) + bytes(5)
 
-    def monitor(self, stop: threading.Event, can_ids: set[int] | None = None,
-                max_duration_s: float | None = None) -> Iterator[CanFrame]:
+    def monitor(
+        self, stop: threading.Event, can_ids: set[int] | None = None, max_duration_s: float | None = None
+    ) -> Iterator[CanFrame]:
         self._require_open()
         if self._ford:
             # No simulated Ford broadcast: wait out the window as an idle bus would.

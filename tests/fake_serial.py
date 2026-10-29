@@ -4,12 +4,23 @@
 (STN2230) or "elm327" (plain ELM327 that answers "?" to ST commands)."""
 
 DEVICE_REPLIES = {
-    "vlinker": {"ATZ": "ELM327 v2.2", "ATWS": "ELM327 v2.2", "ATI": "ELM327 v2.2",
-                "AT@1": "vLinker FS", "STI": "STN1170 v4.3.1", "STDI": "vLinker FS r2"},
-    "obdlink_ex": {"ATZ": "ELM327 v1.4b", "ATWS": "ELM327 v1.4b", "ATI": "ELM327 v1.4b",
-                   "AT@1": "OBDLink EX", "STI": "STN2230 v5.6.19", "STDI": "OBDLink EX r1.0.0"},
-    "elm327": {"ATZ": "ELM327 v2.2", "ATWS": "ELM327 v2.2", "ATI": "ELM327 v2.2",
-               "AT@1": "OBDII to RS232 Interpreter"},
+    "vlinker": {
+        "ATZ": "ELM327 v2.2",
+        "ATWS": "ELM327 v2.2",
+        "ATI": "ELM327 v2.2",
+        "AT@1": "vLinker FS",
+        "STI": "STN1170 v4.3.1",
+        "STDI": "vLinker FS r2",
+    },
+    "obdlink_ex": {
+        "ATZ": "ELM327 v1.4b",
+        "ATWS": "ELM327 v1.4b",
+        "ATI": "ELM327 v1.4b",
+        "AT@1": "OBDLink EX",
+        "STI": "STN2230 v5.6.19",
+        "STDI": "OBDLink EX r1.0.0",
+    },
+    "elm327": {"ATZ": "ELM327 v2.2", "ATWS": "ELM327 v2.2", "ATI": "ELM327 v2.2", "AT@1": "OBDII to RS232 Interpreter"},
 }
 
 
@@ -25,7 +36,8 @@ class FakeSerial:
         self.read_error = False
         self.replies = {
             **DEVICE_REPLIES[device],
-            "ATRV": "12.4V", "ATDP": "ISO 15765-4 (CAN 11/500)",
+            "ATRV": "12.4V",
+            "ATDP": "ISO 15765-4 (CAN 11/500)",
             "0100": "SEARCHING...\r7E8 06 41 00 BE 3F A8 13",
             "010C": "7E8 04 41 0C 1A F8 00 00 00",
             "0902": "7E8 10 14 49 02 01 4A 4E 31\r7E8 21 53 41 4D 50 4C 45 58\r7E8 22 58 58 58 58 58 58 30",

@@ -91,7 +91,9 @@ def usable_git() -> str | None:
     if not git:
         return None
     if sys.platform == "darwin" and git == "/usr/bin/git":
-        probe = subprocess.run(["xcode-select", "-p"], stdin=subprocess.DEVNULL, capture_output=True, timeout=GIT_TIMEOUT_S)
+        probe = subprocess.run(
+            ["xcode-select", "-p"], stdin=subprocess.DEVNULL, capture_output=True, timeout=GIT_TIMEOUT_S
+        )
         if probe.returncode != 0:
             return None
     return git
@@ -104,9 +106,17 @@ def init_git_repo(workspace: Path) -> None:
     git = usable_git()
     if git is None or (workspace / ".git").exists():
         return
-    for args in (["init", "-q"], ["add", "-A"], [*GIT_IDENTITY, "commit", "-q", "-m", f"q50diag {build_id(workspace)}"]):
+    for args in (
+        ["init", "-q"],
+        ["add", "-A"],
+        [*GIT_IDENTITY, "commit", "-q", "-m", f"q50diag {build_id(workspace)}"],
+    ):
         result = subprocess.run(
-            [git, *args], cwd=workspace, stdin=subprocess.DEVNULL, capture_output=True, text=True,
+            [git, *args],
+            cwd=workspace,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
             timeout=GIT_TIMEOUT_S,
         )
         if result.returncode != 0:

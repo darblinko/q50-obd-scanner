@@ -104,7 +104,9 @@ class DashboardSettingsDialog(QDialog):
         layout.setSpacing(12)
         save_as, rename, self.delete_button = button("Save As..."), button("Rename..."), button("Delete", "danger")
         save_as.clicked.connect(lambda: self._prompt("Save layout as", "Layout name", self.save_as))
-        rename.clicked.connect(lambda: self._prompt("Rename layout", "Layout name", self.rename, self.current_layout().name))
+        rename.clicked.connect(
+            lambda: self._prompt("Rename layout", "Layout name", self.rename, self.current_layout().name)
+        )
         self.delete_button.clicked.connect(self.delete_layout)
         layout.addWidget(label("SAVED LAYOUT", "section"))
         layout.addLayout(hbox(self.layout_combo, save_as, rename, self.delete_button, None))
@@ -260,8 +262,9 @@ class DashboardSettingsDialog(QDialog):
     def _on_item_changed(self, item: QTableWidgetItem) -> None:
         if self._filling or item.column() not in (MIN_COLUMN, MAX_COLUMN):
             return
-        self.set_range_text(item.row(), self.table.item(item.row(), MIN_COLUMN).text(),
-                            self.table.item(item.row(), MAX_COLUMN).text())
+        self.set_range_text(
+            item.row(), self.table.item(item.row(), MIN_COLUMN).text(), self.table.item(item.row(), MAX_COLUMN).text()
+        )
 
     def set_range_text(self, row: int, low_text: str, high_text: str) -> None:
         """Parse a range override for slot `row`; both blank clears it."""

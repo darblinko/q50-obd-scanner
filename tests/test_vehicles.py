@@ -22,6 +22,7 @@ PCM = ModuleAddress("PCM", 0x7E0, 0x7E8, "uds", "Powertrain")
 
 # --- profiles -------------------------------------------------------------
 
+
 def test_three_profiles_with_unique_keys_and_q50_default():
     assert [v.key for v in VEHICLES] == ["q50_2017", "mustang_gt350r_2016", "mustang_gt_2017"]
     assert default_vehicle() is Q50
@@ -84,6 +85,7 @@ def test_every_ford_parameter_states_its_confidence():
 
 # --- Ford decoders --------------------------------------------------------
 
+
 def test_ford_decoders():
     assert ford.decode_transmission_temp(bytes([0x01, 0x90])) == 25.0
     assert ford.decode_transmission_temp(bytes([0xFF, 0xF0])) == -1.0
@@ -106,6 +108,7 @@ def test_ford_format_dtc_shows_raw_status_byte():
 
 # --- Ford requests over a scripted transport ------------------------------
 
+
 class ScriptedTransport:
     """Answers from a dict keyed by payload; a list value is consumed in order."""
 
@@ -127,29 +130,33 @@ class ScriptedTransport:
 
 def test_ford_request_retries_once_in_extended_session():
     ford.reset_sessions()
-    transport = ScriptedTransport({
-        b"\x22\x03\xEC": [NegativeResponse(0x22, 0x7F), b"\x62\x03\xEC\x00\x00"],
-        b"\x10\x03": b"\x50\x03",
-    })
-    assert ford.request(transport, PCM, b"\x22\x03\xEC") == b"\x62\x03\xEC\x00\x00"
-    assert transport.sent == [b"\x22\x03\xEC", b"\x10\x03", b"\x22\x03\xEC"]
+    transport = ScriptedTransport(
+        {
+            b"\x22\x03\xec": [NegativeResponse(0x22, 0x7F), b"\x62\x03\xec\x00\x00"],
+            b"\x10\x03": b"\x50\x03",
+        }
+    )
+    assert ford.request(transport, PCM, b"\x22\x03\xec") == b"\x62\x03\xec\x00\x00"
+    assert transport.sent == [b"\x22\x03\xec", b"\x10\x03", b"\x22\x03\xec"]
 
 
 def test_ford_request_does_not_retry_other_negative_responses():
     ford.reset_sessions()
-    transport = ScriptedTransport({b"\x22\x03\xEC": NegativeResponse(0x22, 0x31)})
+    transport = ScriptedTransport({b"\x22\x03\xec": NegativeResponse(0x22, 0x31)})
     with pytest.raises(NegativeResponse):
-        ford.request(transport, PCM, b"\x22\x03\xEC")
-    assert transport.sent == [b"\x22\x03\xEC"]
+        ford.request(transport, PCM, b"\x22\x03\xec")
+    assert transport.sent == [b"\x22\x03\xec"]
 
 
 def test_ford_identification_and_dtcs():
     ford.reset_sessions()
-    transport = ScriptedTransport({
-        b"\x22\xF1\x90": b"\x62\xF1\x90" + b"1FASAMPLEXXXXXXX2",
-        b"\x22\xF1\x88": b"\x62\xF1\x88" + b"FR3A-AB",
-        b"\x19\x02\xFF": bytes([0x59, 0x02, 0xFF, 0xC1, 0x00, 0x28, 0x09]),
-    })
+    transport = ScriptedTransport(
+        {
+            b"\x22\xf1\x90": b"\x62\xf1\x90" + b"1FASAMPLEXXXXXXX2",
+            b"\x22\xf1\x88": b"\x62\xf1\x88" + b"FR3A-AB",
+            b"\x19\x02\xff": bytes([0x59, 0x02, 0xFF, 0xC1, 0x00, 0x28, 0x09]),
+        }
+    )
     ident = ford.read_identification(transport, PCM)
     assert ident["VIN"].startswith("1FASAMPLEXXXXXXX2 [")
     assert ident["Software part number"].startswith("FR3A-AB")
@@ -160,12 +167,13 @@ def test_ford_identification_and_dtcs():
 
 def test_ford_clear_uses_uds_14_with_allow_clear():
     ford.reset_sessions()
-    transport = ScriptedTransport({b"\x14\xFF\xFF\xFF": b"\x54"})
+    transport = ScriptedTransport({b"\x14\xff\xff\xff": b"\x54"})
     ford.clear_module_dtcs(transport, PCM)
-    assert transport.sent == [b"\x14\xFF\xFF\xFF"]
+    assert transport.sent == [b"\x14\xff\xff\xff"]
 
 
 # --- MechanIQ prompt ------------------------------------------------------
+
 
 def test_default_system_append_describes_q50_and_vlinker():
     assert prompt.build_system_append(Q50, adapter_by_key("vlinker_fs"), "hs") == prompt.SYSTEM_APPEND
@@ -183,6 +191,7 @@ def test_system_append_follows_vehicle_adapter_and_bus():
 
 
 # --- start-up selection ---------------------------------------------------
+
 
 def test_cli_vehicle_option_and_selection():
     assert parse_args(["--vehicle", "mustang_gt_2017", "--sim"]).vehicle == "mustang_gt_2017"

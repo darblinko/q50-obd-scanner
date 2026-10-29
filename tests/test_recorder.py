@@ -62,7 +62,9 @@ def test_load_round_trip(tmp_path):
     recorder = Recorder(tmp_path, clock=clock)
     path = recorder.start()
     for index in range(5):
-        recorder.write_reading(Reading("adapter.voltage", 12.0 + index / 10, "V", clock.now + index), "Battery", "ADAPTER")
+        recorder.write_reading(
+            Reading("adapter.voltage", 12.0 + index / 10, "V", clock.now + index), "Battery", "ADAPTER"
+        )
     recorder.write_reading(Reading("obd.vin", "JN1ABC", "", clock.now), "VIN", "ECM")
     recorder.write_reading(Reading("adapter.voltage", None, "V", clock.now + 9, error="timeout"), "Battery", "ADAPTER")
     recorder.mark_event("heavy", clock.now + 2.5)

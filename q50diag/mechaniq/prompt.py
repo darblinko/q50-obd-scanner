@@ -21,8 +21,8 @@ CHANGE_TOOLS = [Q50_TOOL_PREFIX + "apply_change", Q50_TOOL_PREFIX + "undo_change
 _SYSTEM_TEMPLATE = """
 # MechanIQ
 
-You are MechanIQ, running inside q50diag, a PySide6 diagnostic app for the vehicle selected on its Connect page. The app stays
-connected to the car and keeps polling while you work. The user talks to you from a panel in the
+You are MechanIQ, running inside q50diag, a PySide6 diagnostic app for the vehicle selected on its Connect page.
+The app stays connected to the car and keeps polling while you work. The user talks to you from a panel in the
 app. You are the lead agent: answer directly when the task is small, and delegate to the helper
 subagents (code-fixer, data-analyst, test-coach) when a task is long or can run in parallel.
 
@@ -77,7 +77,10 @@ Be brief and factual. Quote measured values with units and their source (paramet
 recording file and time). Label inferences as inferences.
 """.strip()
 
-def car_section(vehicle: VehicleProfile | None = None, adapter: AdapterProfile | None = None, bus_key: str = "hs") -> str:
+
+def car_section(
+    vehicle: VehicleProfile | None = None, adapter: AdapterProfile | None = None, bus_key: str = "hs"
+) -> str:
     """The "car and adapter" paragraph for the active vehicle profile and adapter."""
     vehicle = vehicle or default_vehicle()
     adapter = adapter or adapter_by_key(DEFAULT_ADAPTER_KEY)
@@ -89,8 +92,9 @@ def car_section(vehicle: VehicleProfile | None = None, adapter: AdapterProfile |
     return "\n".join(["## The car and the adapter", "", *lines[:split], adapter_line, *lines[split:]])
 
 
-def build_system_append(vehicle: VehicleProfile | None = None, adapter: AdapterProfile | None = None,
-                        bus_key: str = "hs") -> str:
+def build_system_append(
+    vehicle: VehicleProfile | None = None, adapter: AdapterProfile | None = None, bus_key: str = "hs"
+) -> str:
     return _SYSTEM_TEMPLATE.replace("{car_section}", car_section(vehicle, adapter, bus_key))
 
 
@@ -107,10 +111,12 @@ def _pytest_hint() -> str:
 def _statistics_hint() -> str:
     """How the analyst computes statistics: a frozen build ships no Python for Bash."""
     if getattr(sys, "frozen", False):
-        return ("Python is not installed on this computer: do not run python from Bash. Compute statistics "
-                "with the q50 tools: read_recording gives min, max, mean and sample counts per parameter and, "
-                "with keys and points, series resampled into time bins; get_readings gives live min, max, "
-                "count and recent samples.")
+        return (
+            "Python is not installed on this computer: do not run python from Bash. Compute statistics "
+            "with the q50 tools: read_recording gives min, max, mean and sample counts per parameter and, "
+            "with keys and points, series resampled into time bins; get_readings gives live min, max, "
+            "count and recent samples."
+        )
     return "You may run read-only Python in Bash to compute statistics on a recording."
 
 
@@ -143,7 +149,9 @@ polling and summarise the measured values per step. Do not edit any file.
 
 AGENTS: dict[str, AgentDefinition] = {
     "code-fixer": AgentDefinition(
-        description="Edits q50diag code (connection, decoding, pages), runs the tests and applies the change with apply_change.",
+        description=(
+            "Edits q50diag code (connection, decoding, pages), runs the tests and applies the change with apply_change."
+        ),
         prompt=CODE_FIXER_PROMPT,
         model="inherit",
     ),

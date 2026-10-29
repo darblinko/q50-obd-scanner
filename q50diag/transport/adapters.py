@@ -38,13 +38,22 @@ _BAUD_RATES = (115200, 38400, 500000, 230400, 9600)
 
 ADAPTERS = (
     AdapterProfile(
-        "vlinker_fs", "Vgate vLinker FS USB", (HS_CAN, MS_CAN, MS_PINS_500), _BAUD_RATES, ("vLinker",),
+        "vlinker_fs",
+        "Vgate vLinker FS USB",
+        (HS_CAN, MS_CAN, MS_PINS_500),
+        _BAUD_RATES,
+        ("vLinker",),
         "STN1170 adapter on FTDI USB at 115200 baud. HS-CAN is tested on a 2017 Q50; "
-        "MS-CAN on pins 3/11 is untested on this adapter."),
+        "MS-CAN on pins 3/11 is untested on this adapter.",
+    ),
     AdapterProfile(
-        "obdlink_ex", "OBDLink EX USB", (HS_CAN, MS_CAN, MS_PINS_500), _BAUD_RATES, ("OBDLink EX",),
-        "ScanTool.net STN223x adapter on FTDI USB at 115200 baud. "
-        "Selects HS-CAN or Ford MS-CAN on pins 3/11 with STP."),
+        "obdlink_ex",
+        "OBDLink EX USB",
+        (HS_CAN, MS_CAN, MS_PINS_500),
+        _BAUD_RATES,
+        ("OBDLink EX",),
+        "ScanTool.net STN223x adapter on FTDI USB at 115200 baud. Selects HS-CAN or Ford MS-CAN on pins 3/11 with STP.",
+    ),
 )
 DEFAULT_ADAPTER_KEY = "vlinker_fs"
 

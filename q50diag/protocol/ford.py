@@ -58,8 +58,9 @@ def _enter_extended(t: Transport, module: ModuleAddress) -> None:
         _extended[t] = (generation, addresses)
 
 
-def request(t: Transport, module: ModuleAddress, payload: bytes, timeout_s: float = 1.0,
-            allow_clear: bool = False) -> bytes:
+def request(
+    t: Transport, module: ModuleAddress, payload: bytes, timeout_s: float = 1.0, allow_clear: bool = False
+) -> bytes:
     """Send `payload`; retry once in the extended session if the module asks for it."""
     try:
         return t.request(module.tx_id, module.rx_id, payload, timeout_s=timeout_s, allow_clear=allow_clear)
@@ -83,7 +84,7 @@ def read_identification(t: Transport, module: ModuleAddress) -> dict[str, str]:
         if not reply.startswith(echo):
             LOGGER.warning("Unexpected identification echo from %s: %s", module.name, reply.hex())
             continue
-        data = reply[len(echo):]
+        data = reply[len(echo) :]
         printable = "".join(chr(value) if 32 <= value < 127 else "." for value in data)
         result[label] = f"{printable} [{data.hex(' ').upper()}]"
     return result
@@ -95,13 +96,13 @@ def read_module_dtcs(t: Transport, module: ModuleAddress) -> list[Dtc]:
 
 
 def clear_module_dtcs(t: Transport, module: ModuleAddress) -> None:
-    reply = request(t, module, b"\x14\xFF\xFF\xFF", allow_clear=True)
+    reply = request(t, module, b"\x14\xff\xff\xff", allow_clear=True)
     if not reply or reply[0] != 0x54:
         raise ValueError(f"Unexpected DTC clear response from {module.name}: {reply.hex()}")
 
 
 def format_dtc(dtc: Dtc) -> str:
-    """"P0300-00 (status AC)": 3-byte UDS code plus the raw ISO 14229 status byte."""
+    """ "P0300-00 (status AC)": 3-byte UDS code plus the raw ISO 14229 status byte."""
     return dtc.code if dtc.status is None else f"{dtc.code} (status {dtc.status:02X})"
 
 
@@ -143,32 +144,67 @@ def decode_percent(data: bytes) -> float:
     return data[0]
 
 
-MIRROR_NOTE = ("Confidence: inferred. OBD-on-UDS mirror of a Mode 01 PID (DID F4xx = PID xx, "
-               "SAE J1979-2); not confirmed on an S550.")
+MIRROR_NOTE = (
+    "Confidence: inferred. OBD-on-UDS mirror of a Mode 01 PID (DID F4xx = PID xx, "
+    "SAE J1979-2); not confirmed on an S550."
+)
 UNVERIFIED_NOTE = "Confidence: unverified. Single source (Ford Focus RS); not confirmed on an S550."
 # (did, name, unit, category, decode, min, max, description)
 PCM_DIDS = (
     (0xF405, "Coolant temperature (DID F405)", "degC", "Engine", decode_temp_offset_40, -40, 215, MIRROR_NOTE),
     (0xF40F, "Intake air temperature (DID F40F)", "degC", "Air", decode_temp_offset_40, -40, 215, MIRROR_NOTE),
     (0xF42F, "Fuel level (DID F42F)", "%", "Fuel", decode_percent_255, 0, 100, MIRROR_NOTE),
-    (0x03EC, "Ignition correction cylinder 1 (knock retard)", "deg", "Engine", decode_knock_retard, -10, 10,
-     "Formula signed(A)/2 + B/512 deg. Confidence: low. Sources disagree on the sign: "
-     "some show retard as negative, others as positive."),
-    (0x0304, "Battery voltage (PCM)", "V", "Electrical", decode_battery_voltage, 0, 20,
-     "Formula (A*256+B)/2048 V. " + UNVERIFIED_NOTE),
+    (
+        0x03EC,
+        "Ignition correction cylinder 1 (knock retard)",
+        "deg",
+        "Engine",
+        decode_knock_retard,
+        -10,
+        10,
+        "Formula signed(A)/2 + B/512 deg. Confidence: low. Sources disagree on the sign: "
+        "some show retard as negative, others as positive.",
+    ),
+    (
+        0x0304,
+        "Battery voltage (PCM)",
+        "V",
+        "Electrical",
+        decode_battery_voltage,
+        0,
+        20,
+        "Formula (A*256+B)/2048 V. " + UNVERIFIED_NOTE,
+    ),
     (0x054B, "Oil life remaining", "%", "Engine", decode_percent, 0, 100, "Formula A %. " + UNVERIFIED_NOTE),
 )
 TRANSMISSION_DID = (
-    0x1E1C, "Transmission fluid temperature (6R80)", "degC", "Transmission", decode_transmission_temp, -30, 150,
+    0x1E1C,
+    "Transmission fluid temperature (6R80)",
+    "degC",
+    "Transmission",
+    decode_transmission_temp,
+    -30,
+    150,
     "Formula signed(A*256+B)/16 degC. Confidence: medium; several sources including an S550 owner "
     "report. 6R80 automatic only: a manual car does not answer.",
 )
 
 
-def _parameter(module: ModuleAddress, did: int, name: str, unit: str, category: str, decode,
-               minimum, maximum, description: str) -> ParameterDef:
-    return ParameterDef(f"{module.name}.22.{did:04X}", name, unit, module.name, category,
-                        b"\x22" + did.to_bytes(2, "big"), decode, minimum, maximum, description)
+def _parameter(
+    module: ModuleAddress, did: int, name: str, unit: str, category: str, decode, minimum, maximum, description: str
+) -> ParameterDef:
+    return ParameterDef(
+        f"{module.name}.22.{did:04X}",
+        name,
+        unit,
+        module.name,
+        category,
+        b"\x22" + did.to_bytes(2, "big"),
+        decode,
+        minimum,
+        maximum,
+        description,
+    )
 
 
 def pcm_parameters(module: ModuleAddress, automatic: bool) -> list[ParameterDef]:

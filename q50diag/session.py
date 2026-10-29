@@ -677,9 +677,7 @@ class Session(QObject):
 
     def _do_discover(self) -> None:
         transport = self._require()
-        found = self.backend.discover_modules(
-            transport, self._report_progress("Discovery"), self._cancel
-        )
+        found = self.backend.discover_modules(transport, self._report_progress("Discovery"), self._cancel)
         self.discovered = list(found)
         self.modules_discovered.emit(list(found))
         state = "cancelled, partial result" if self._cancel.is_set() else "done"
@@ -710,9 +708,7 @@ class Session(QObject):
         if include_parameters:
             for param in self.backend.module_parameters(module):
                 readings.append(self._read_one(module, param))
-        responding = (
-            bool(ident) or bool(dtcs) or any(not r.error for r in readings) or self._is_discovered(module)
-        )
+        responding = bool(ident) or bool(dtcs) or any(not r.error for r in readings) or self._is_discovered(module)
         report = ModuleReport(module, responding, ident, dtcs, readings, errors)
         self.module_read.emit(report)
         self.status.emit(f"{module.name}: {'responding' if responding else 'no response'}")
@@ -721,8 +717,13 @@ class Session(QObject):
         transport = self._require()
         label = f"Scan {module.name} 0x{service:02X}"
         results = self.backend.scan_identifiers(
-            transport, module, service, start, end,
-            progress=self._report_progress(label), stop=self._cancel,
+            transport,
+            module,
+            service,
+            start,
+            end,
+            progress=self._report_progress(label),
+            stop=self._cancel,
         )
         complete = not self._cancel.is_set()
         self.identifiers_scanned.emit(IdentifierScan(module, service, start, end, dict(results), complete))

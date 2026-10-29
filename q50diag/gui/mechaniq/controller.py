@@ -71,8 +71,9 @@ class MechaniqController(QObject):
     _posted = Signal(object)  # zero-argument callable to run on the main thread
     needs_key_changed = Signal(bool)
 
-    def __init__(self, model: MechaniqModel, ctx=None, project_root: Path | None = None,
-                 parent: QObject | None = None) -> None:
+    def __init__(
+        self, model: MechaniqModel, ctx=None, project_root: Path | None = None, parent: QObject | None = None
+    ) -> None:
         super().__init__(parent)
         self.model = model
         self.ctx = ctx
@@ -163,8 +164,11 @@ class MechaniqController(QObject):
 
     def save_and_apply(self, settings, save: Callable) -> None:
         if self._settings_inside_project():
-            self.model.add_notice(f"Settings not saved: {self.settings_path} is inside the project folder, "
-                                  "which MechanIQ commits to git.", error=True)
+            self.model.add_notice(
+                f"Settings not saved: {self.settings_path} is inside the project folder, "
+                "which MechanIQ commits to git.",
+                error=True,
+            )
             return
         try:
             save(settings, self.settings_path)
@@ -174,8 +178,9 @@ class MechaniqController(QObject):
         self.set_settings(settings, self.settings_path)
         if self.runner is not None:
             self.runner.apply_settings(settings)
-        self.model.add_notice(f"Settings saved: {settings.model}, {self.model.auth_source}. "
-                              "They apply from the next message.")
+        self.model.add_notice(
+            f"Settings saved: {settings.model}, {self.model.auth_source}. They apply from the next message."
+        )
 
     def _settings_inside_project(self) -> bool:
         if self.settings_path is None or self.project_root is None:

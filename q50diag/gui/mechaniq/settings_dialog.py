@@ -50,8 +50,9 @@ MISSING_KEY_SUBSCRIPTION = "Enter an API key or choose Subscription."
 
 
 class MechaniqSettingsDialog(QDialog):
-    def __init__(self, settings, models: Sequence[str], parent: QWidget | None = None,
-                 packaged: bool | None = None) -> None:
+    def __init__(
+        self, settings, models: Sequence[str], parent: QWidget | None = None, packaged: bool | None = None
+    ) -> None:
         super().__init__(parent)
         self.setWindowTitle("MechanIQ settings")
         self.setMinimumWidth(460)

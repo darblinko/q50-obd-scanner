@@ -106,9 +106,7 @@ def test_trouble_codes_table_and_filters(ctx):
     page = _scanned_page(ctx)
     codes = {page.table.item(r, 1).text() for r in range(page.table.rowCount())}
     assert codes == {"P0300", "P0171", "C1601", "C160A"}
-    descriptions = {
-        page.table.item(r, 1).text(): page.table.item(r, 2).text() for r in range(page.table.rowCount())
-    }
+    descriptions = {page.table.item(r, 1).text(): page.table.item(r, 2).text() for r in range(page.table.rowCount())}
     assert descriptions["C1601"] == "EPS supply voltage"
     page.module_filter.setCurrentText("EPS")
     assert page.table.rowCount() == 2

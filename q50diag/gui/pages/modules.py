@@ -389,7 +389,8 @@ class ModulesPage(Page):
         self.live_button.setEnabled(has_params)
         self.read_params_button.setEnabled(has_params)
         self.params_note.setText(
-            f"{len(params)} parameters" if has_params
+            f"{len(params)} parameters"
+            if has_params
             else "No known parameters for this module. Use the Explorer tab to find identifiers."
         )
 

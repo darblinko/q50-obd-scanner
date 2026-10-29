@@ -228,7 +228,11 @@ class MechaniqRunner(QObject):
         self._stderr_tail.clear()
         append = self._system_append() if self._system_append is not None else None
         options = build_options(
-            self._settings, self._project_root, self._mcp_server, self._guard, stderr=self._stderr_tail.append,
+            self._settings,
+            self._project_root,
+            self._mcp_server,
+            self._guard,
+            stderr=self._stderr_tail.append,
             system_append=append,
         )
         client = self._client_factory(options=options)

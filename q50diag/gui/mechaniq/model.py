@@ -16,8 +16,21 @@ from PySide6.QtCore import QObject, Signal
 LEAD = "lead"
 AGENT_TOOLS = ("Task", "Agent")
 SUMMARY_KEYS = (
-    "file_path", "path", "notebook_path", "command", "pattern", "query", "url", "description",
-    "label", "summary", "keys", "module", "search", "title", "prompt",
+    "file_path",
+    "path",
+    "notebook_path",
+    "command",
+    "pattern",
+    "query",
+    "url",
+    "description",
+    "label",
+    "summary",
+    "keys",
+    "module",
+    "search",
+    "title",
+    "prompt",
 )
 SUMMARY_LIMIT = 90
 MCP_PREFIX = "mcp__q50__"
@@ -46,7 +59,7 @@ class AgentInfo:
 
 
 def tool_display_name(name: str) -> str:
-    return name[len(MCP_PREFIX):] if name.startswith(MCP_PREFIX) else name
+    return name[len(MCP_PREFIX) :] if name.startswith(MCP_PREFIX) else name
 
 
 def summarize_tool_input(tool_input: object, project_root: Path | None = None) -> str:
@@ -148,8 +161,9 @@ class MechaniqModel(QObject):
         reload_kind = getattr(entry, "reload_kind", "") or "no reload"
         commit = (getattr(entry, "commit", "") or "")[:7]
         detail = ", ".join(part for part in (getattr(entry, "status", ""), reload_kind, commit) if part)
-        self.add_notice(f"Change: {getattr(entry, 'summary', '')} ({detail})",
-                        error=getattr(entry, "status", "") == "tests_failed")
+        self.add_notice(
+            f"Change: {getattr(entry, 'summary', '')} ({detail})", error=getattr(entry, "status", "") == "tests_failed"
+        )
 
     def reset(self) -> None:
         """New conversation: clear transcripts and helpers, keep the cost total."""
@@ -208,7 +222,7 @@ class MechaniqModel(QObject):
             entries = self._transcripts.get(owner, [])
             index = next((i for i, e in enumerate(entries) if e.kind == "tool" and e.tool_id == tool_id), None)
             if index is not None:
-                updated = [*entries[:index], replace(entries[index], status=status), *entries[index + 1:]]
+                updated = [*entries[:index], replace(entries[index], status=status), *entries[index + 1 :]]
                 self._set_entries(owner, updated)
                 return
 

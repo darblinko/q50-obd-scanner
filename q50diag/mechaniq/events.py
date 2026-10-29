@@ -73,7 +73,9 @@ def translate(message: object, agent_ids: Set[str] = frozenset()) -> list[AgentE
     if isinstance(message, SystemMessage):
         return _system_events(message)
     if isinstance(message, RateLimitEvent) and message.rate_limit_info.status == "rejected":
-        return [AgentEvent(ERROR, LEAD, "Usage limit reached; wait for the limit to reset or switch auth mode in settings")]
+        return [
+            AgentEvent(ERROR, LEAD, "Usage limit reached; wait for the limit to reset or switch auth mode in settings")
+        ]
     return []
 
 
@@ -104,11 +106,12 @@ def _assistant_events(message: AssistantMessage) -> list[AgentEvent]:
     return events
 
 
-
 def _assistant_error_text(error: str) -> str:
     if error == "authentication_failed":
-        return ("Anthropic rejected the API key. Open MechanIQ settings and paste a valid key "
-                "from platform.claude.com/settings/keys.")
+        return (
+            "Anthropic rejected the API key. Open MechanIQ settings and paste a valid key "
+            "from platform.claude.com/settings/keys."
+        )
     return f"Assistant error: {error}"
 
 

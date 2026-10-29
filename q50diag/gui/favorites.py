@@ -75,8 +75,9 @@ def default_preferences() -> Preferences:
     return Preferences(favorites=DEFAULT_KEYS, layouts=(default_layout(),), active=DEFAULT_LAYOUT_ID)
 
 
-def adopt_vehicle_layout(prefs: Preferences, vehicle_key: str, name: str, keys: tuple[str, ...],
-                         available: Callable[[str], bool]) -> Preferences:
+def adopt_vehicle_layout(
+    prefs: Preferences, vehicle_key: str, name: str, keys: tuple[str, ...], available: Callable[[str], bool]
+) -> Preferences:
     """Choose the layout for a newly selected vehicle: the one remembered for
     it; else the active layout when every visible sensor exists on the vehicle;
     else a layout named after the vehicle, built from `keys` on first use, whose
@@ -121,8 +122,11 @@ def load_favorites(path: Path | None = None) -> Preferences:
     target = _target(path)
     status, raw = _inspect(target)
     if status in ("corrupt", "newer"):
-        log.warning("Favorites at %s are %s; using defaults and leaving the file untouched", target,
-                    "from a newer version" if status == "newer" else "unreadable")
+        log.warning(
+            "Favorites at %s are %s; using defaults and leaving the file untouched",
+            target,
+            "from a newer version" if status == "newer" else "unreadable",
+        )
         return default_preferences()
     if raw is None:
         return default_preferences()
@@ -161,8 +165,11 @@ def _vehicle_layouts(raw: object, layout_ids: set[str]) -> tuple[tuple[str, str]
     """Valid (vehicle key, layout id) pairs; entries naming a missing layout are dropped."""
     if not isinstance(raw, dict):
         return ()
-    return tuple((vehicle, layout_id) for vehicle, layout_id in raw.items()
-                 if isinstance(vehicle, str) and vehicle and isinstance(layout_id, str) and layout_id in layout_ids)
+    return tuple(
+        (vehicle, layout_id)
+        for vehicle, layout_id in raw.items()
+        if isinstance(vehicle, str) and vehicle and isinstance(layout_id, str) and layout_id in layout_ids
+    )
 
 
 def _layouts(raw: object) -> tuple[Layout, ...]:

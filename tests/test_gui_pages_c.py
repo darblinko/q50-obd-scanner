@@ -124,7 +124,13 @@ def test_steering_watch_readouts_and_recording(ctx, tmp_path):
     page = _show(SteeringPage(ctx))
     assert page.chart_keys()
     subscribed = {param.key for _module, param in page.subscriptions()}
-    assert {"EPS.21.01.supply", "EPS.21.01.angle", "EPS.21.01.torque", "EPS.21.01.assist", "EPS.21.01.b11"} <= subscribed
+    assert {
+        "EPS.21.01.supply",
+        "EPS.21.01.angle",
+        "EPS.21.01.torque",
+        "EPS.21.01.assist",
+        "EPS.21.01.b11",
+    } <= subscribed
     assert not any(key.startswith("bcast.") for key in subscribed)
     frames = []
     ctx.session.frames.connect(frames.append)

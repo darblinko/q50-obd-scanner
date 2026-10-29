@@ -196,7 +196,9 @@ def _restart_notes(modules: set[str], reverse: dict[str, set[str]]) -> list[str]
                 continue
             if dependent == MAIN_WINDOW and _within(module, PAGES_PACKAGE):
                 continue  # rebuild_page looks the page class up in the reloaded module
-            notes.append(f"{dependent} imported names from {module} at startup; that use keeps the old code until restart")
+            notes.append(
+                f"{dependent} imported names from {module} at startup; that use keeps the old code until restart"
+            )
     return notes
 
 
@@ -211,7 +213,7 @@ class ReloadPlan:
 
     @property
     def kind(self) -> str:
-        """"restart", "reconnect", "live" or "none": the strongest effect needed."""
+        """ "restart", "reconnect", "live" or "none": the strongest effect needed."""
         if self.restart_files:
             return "restart"
         if self.reconnect_modules:

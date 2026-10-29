@@ -74,8 +74,7 @@ class OverviewPage(Page):
         self.modules_card = StatCard("Modules found", "--", "Run a full scan to discover modules")
         self.dtc_card = StatCard("Trouble codes", "--", "Run a full scan to read every module")
         for index, card in enumerate(
-            (self.vin_card, self.mil_card, self.voltage_card,
-             self.adapter_card, self.modules_card, self.dtc_card)
+            (self.vin_card, self.mil_card, self.voltage_card, self.adapter_card, self.modules_card, self.dtc_card)
         ):
             grid.addWidget(card, index // 3, index % 3)
         self.monitor_table = make_table(["Monitor", "Status"], stretch_column=0)
@@ -139,7 +138,9 @@ class OverviewPage(Page):
 
     def _on_voltage(self, volts) -> None:
         text = f"{volts:.2f} V" if volts is not None else "--"
-        self.voltage_card.set_value(text, voltage_state(volts), voltage_detail(volts, self.ctx.vehicle.low_voltage_note))
+        self.voltage_card.set_value(
+            text, voltage_state(volts), voltage_detail(volts, self.ctx.vehicle.low_voltage_note)
+        )
 
     def _on_connection(self, connected: bool, info: AdapterInfo | None) -> None:
         if connected and info is not None:

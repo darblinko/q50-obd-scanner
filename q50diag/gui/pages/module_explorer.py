@@ -146,9 +146,17 @@ class ExplorerTab(QWidget):
         self.reset_button.clicked.connect(self.reset_changes)
         self.status_label = label("No scan yet", "faint")
         return hbox(
-            label("Service", "dim"), self.service_box, label("From", "dim"), self.start_edit,
-            label("To", "dim"), self.end_edit, self.scan_button, self.watch_button,
-            self.reset_button, None, self.status_label,
+            label("Service", "dim"),
+            self.service_box,
+            label("From", "dim"),
+            self.start_edit,
+            label("To", "dim"),
+            self.end_edit,
+            self.scan_button,
+            self.watch_button,
+            self.reset_button,
+            None,
+            self.status_label,
         )
 
     def _build_pin_row(self):

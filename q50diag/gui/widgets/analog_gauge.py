@@ -113,7 +113,7 @@ def _nice_steps(span: float):
     exponent = math.floor(math.log10(span / 10.0))
     while True:
         for mantissa in NICE_MANTISSAS:
-            yield mantissa, mantissa * 10.0 ** exponent
+            yield mantissa, mantissa * 10.0**exponent
         exponent += 1
 
 
@@ -139,9 +139,15 @@ def dial_ticks(low: float, high: float, radius: float, char_width: float, label_
         spacing = math.radians(SWEEP_DEG) * label_radius * step / span
         if spacing >= widest + 0.8 * label_px or len(majors) <= 2:
             minor_step = step / MINOR_DIVISIONS[mantissa]
-            minors = [] if spacing / MINOR_DIVISIONS[mantissa] < 3 else [
-                value for value in _multiples(low, high, minor_step)
-                if abs(value / step - round(value / step)) > 1e-6]
+            minors = (
+                []
+                if spacing / MINOR_DIVISIONS[mantissa] < 3
+                else [
+                    value
+                    for value in _multiples(low, high, minor_step)
+                    if abs(value / step - round(value / step)) > 1e-6
+                ]
+            )
             return list(zip(majors, texts)), minors, label_radius, scale
     return [], [], 0.0, scale
 
@@ -158,8 +164,14 @@ def _frame_geometry(width: int, height: int) -> tuple[_Geometry, QRectF]:
     footer_height = small_px * 1.5
     footer_rect = QRectF(PAD, height - PAD - footer_height, width - 2 * PAD, footer_height)
     body = QRectF(PAD, name_rect.bottom() + 2, width - 2 * PAD, footer_rect.top() - name_rect.bottom() - 4)
-    geometry = _Geometry(_font(theme.sans_family(), name_px, bold=True), name_rect,
-                         _font(theme.mono_family(), small_px), footer_rect, err_font, err_rect)
+    geometry = _Geometry(
+        _font(theme.sans_family(), name_px, bold=True),
+        name_rect,
+        _font(theme.mono_family(), small_px),
+        footer_rect,
+        err_font,
+        err_rect,
+    )
     return geometry, body
 
 
@@ -173,8 +185,10 @@ def build_geometry(width: int, height: int, dial: bool) -> _Geometry:
     geometry, body = _frame_geometry(width, height)
     if dial:
         radius = max(10.0, min(body.width() / (2 * MARKER_BASE_R), body.height() / (MARKER_BASE_R + 1.0)))
-        center = QPointF(width / 2, body.top() + MARKER_BASE_R * radius
-                         + max(0.0, body.height() - (MARKER_BASE_R + 1.0) * radius) / 2)
+        center = QPointF(
+            width / 2,
+            body.top() + MARKER_BASE_R * radius + max(0.0, body.height() - (MARKER_BASE_R + 1.0) * radius) / 2,
+        )
         readout_px = max(12.0, radius * 0.34)
         unit_px = max(9.0, radius * 0.14)
         kilo_px = max(8.0, radius * 0.11)
@@ -183,8 +197,9 @@ def build_geometry(width: int, height: int, dial: bool) -> _Geometry:
         geometry.tick_font = _font(theme.mono_family(), max(8.0, radius * 0.17))
         geometry.unit_font = _font(theme.sans_family(), unit_px)
         geometry.kilo_font = _font(theme.mono_family(), kilo_px)
-        geometry.readout_rect = QRectF(center.x() - 0.64 * radius, center.y() + 0.80 * radius - readout_px * 0.65,
-                                       1.28 * radius, readout_px * 1.3)
+        geometry.readout_rect = QRectF(
+            center.x() - 0.64 * radius, center.y() + 0.80 * radius - readout_px * 0.65, 1.28 * radius, readout_px * 1.3
+        )
     else:
         readout_px = _clamp(min(body.height() * 0.42, body.width() * 0.2), 14, 64)
         unit_px = _clamp(readout_px * 0.32, 9, 16)
@@ -202,8 +217,14 @@ def _pen(color: str, width: float = 1.0, cap: Qt.PenCapStyle = Qt.PenCapStyle.Ro
     return pen
 
 
-def _draw_text(painter: QPainter, rect: QRectF, text: str, font: QFont, color: str,
-               align: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignCenter) -> None:
+def _draw_text(
+    painter: QPainter,
+    rect: QRectF,
+    text: str,
+    font: QFont,
+    color: str,
+    align: Qt.AlignmentFlag = Qt.AlignmentFlag.AlignCenter,
+) -> None:
     painter.setFont(font)
     painter.setPen(QColor(color))
     elided = QFontMetricsF(font).elidedText(text, Qt.TextElideMode.ElideRight, rect.width())
@@ -229,8 +250,9 @@ def _paint_dial_ticks(painter: QPainter, geometry: _Geometry, low: float, high: 
     """Draw minor and major ticks with labels. Returns the label rects and the label scale."""
     center, radius = geometry.center, geometry.radius
     metrics = QFontMetricsF(geometry.tick_font)
-    majors, minors, label_radius, scale = dial_ticks(low, high, radius, metrics.horizontalAdvance("0"),
-                                                     geometry.tick_font.pixelSize())
+    majors, minors, label_radius, scale = dial_ticks(
+        low, high, radius, metrics.horizontalAdvance("0"), geometry.tick_font.pixelSize()
+    )
     span = high - low
 
     def angle(value: float) -> float:
@@ -238,12 +260,14 @@ def _paint_dial_ticks(painter: QPainter, geometry: _Geometry, low: float, high: 
 
     painter.setPen(_pen(theme.TEXT_FAINT, max(1.0, radius * 0.012)))
     for value in minors:
-        painter.drawLine(_polar(center, radius * MINOR_INNER_R, angle(value)),
-                         _polar(center, radius * TICK_OUTER_R, angle(value)))
+        painter.drawLine(
+            _polar(center, radius * MINOR_INNER_R, angle(value)), _polar(center, radius * TICK_OUTER_R, angle(value))
+        )
     painter.setPen(_pen(theme.TEXT_DIM, max(1.5, radius * 0.025)))
     for value, _ in majors:
-        painter.drawLine(_polar(center, radius * MAJOR_INNER_R, angle(value)),
-                         _polar(center, radius * TICK_OUTER_R, angle(value)))
+        painter.drawLine(
+            _polar(center, radius * MAJOR_INNER_R, angle(value)), _polar(center, radius * TICK_OUTER_R, angle(value))
+        )
     painter.setFont(geometry.tick_font)
     label_rects = []
     for value, text in majors:
@@ -261,8 +285,10 @@ def _paint_dial_unit(painter: QPainter, geometry: _Geometry, unit: str, kilo: bo
     unit_metrics, kilo_metrics = QFontMetricsF(geometry.unit_font), QFontMetricsF(geometry.kilo_font)
     unit_height = unit_metrics.height() if unit else 0.0
     kilo_height = kilo_metrics.height() if kilo else 0.0
-    width = min(0.9 * radius, 4 + max(unit_metrics.horizontalAdvance(unit),
-                                      kilo_metrics.horizontalAdvance("x1000") if kilo else 0.0))
+    width = min(
+        0.9 * radius,
+        4 + max(unit_metrics.horizontalAdvance(unit), kilo_metrics.horizontalAdvance("x1000") if kilo else 0.0),
+    )
     gap = radius * (HUB_R + 0.04)
     candidates = (center.y() + gap, center.y() - gap - unit_height - kilo_height)
     top = candidates[0]
@@ -275,8 +301,13 @@ def _paint_dial_unit(painter: QPainter, geometry: _Geometry, unit: str, kilo: bo
     if unit:
         _draw_text(painter, QRectF(left, top, 0.9 * radius, unit_height), unit, geometry.unit_font, theme.TEXT_DIM)
     if kilo:
-        _draw_text(painter, QRectF(left, top + unit_height, 0.9 * radius, kilo_height), "x1000",
-                   geometry.kilo_font, theme.TEXT_FAINT)
+        _draw_text(
+            painter,
+            QRectF(left, top + unit_height, 0.9 * radius, kilo_height),
+            "x1000",
+            geometry.kilo_font,
+            theme.TEXT_FAINT,
+        )
 
 
 def _paint_dial_face(painter: QPainter, geometry: _Geometry, low: float, high: float, unit: str) -> None:
@@ -324,8 +355,7 @@ class AnalogGauge(QWidget):
         self._configure("unavailable", name or key, "", None)
 
     def set_parameter(self, name: str, unit: str, low: float | None, high: float | None) -> None:
-        valid = (low is not None and high is not None and math.isfinite(low) and math.isfinite(high)
-                 and high > low)
+        valid = low is not None and high is not None and math.isfinite(low) and math.isfinite(high) and high > low
         self._configure("parameter", name, unit, (float(low), float(high)) if valid else None)
 
     def set_reading(self, value, minimum: float | None = None, maximum: float | None = None, error: str = "") -> None:
@@ -470,8 +500,9 @@ class AnalogGauge(QWidget):
         if mode in ("empty", "unavailable"):
             self._paint_placeholder(painter, geometry, mode)
         else:
-            _draw_text(painter, geometry.name_rect, self._name, geometry.name_font, theme.TEXT_DIM,
-                       Qt.AlignmentFlag.AlignLeft)
+            _draw_text(
+                painter, geometry.name_rect, self._name, geometry.name_font, theme.TEXT_DIM, Qt.AlignmentFlag.AlignLeft
+            )
             if mode == "dial":
                 _paint_dial_face(painter, geometry, *self._range, self._unit)
             else:
@@ -485,8 +516,13 @@ class AnalogGauge(QWidget):
         line = geometry.name_font.pixelSize() * 1.6
         middle = self.height() / 2
         width = self.width() - 2 * PAD
-        _draw_text(painter, QRectF(PAD, middle - line, width, line), title, geometry.name_font,
-                   theme.TEXT_FAINT if mode == "empty" else theme.TEXT_DIM)
+        _draw_text(
+            painter,
+            QRectF(PAD, middle - line, width, line),
+            title,
+            geometry.name_font,
+            theme.TEXT_FAINT if mode == "empty" else theme.TEXT_DIM,
+        )
         painter.setFont(geometry.small_font)
         painter.setPen(QColor(theme.TEXT_FAINT))
         flags = Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop | Qt.TextFlag.TextWordWrap
@@ -504,8 +540,11 @@ class AnalogGauge(QWidget):
         color = theme.TEXT_FAINT if self._error else theme.ACCENT
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.setPen(_pen(color, max(2.0, geometry.radius * 0.05), Qt.PenCapStyle.FlatCap))
-        painter.drawArc(_arc_rect(geometry.center, geometry.radius * TRACK_R), round(START_DEG * 16),
-                        round(-SWEEP_DEG * fraction * 16))
+        painter.drawArc(
+            _arc_rect(geometry.center, geometry.radius * TRACK_R),
+            round(START_DEG * 16),
+            round(-SWEEP_DEG * fraction * 16),
+        )
 
     def _paint_markers(self, painter: QPainter, geometry: _Geometry) -> None:
         center, radius = geometry.center, geometry.radius
@@ -516,11 +555,15 @@ class AnalogGauge(QWidget):
             if value is None:
                 continue
             angle = self._angle(value)
-            painter.drawPolygon(QPolygonF([
-                _polar(center, radius * MARKER_TIP_R, angle),
-                _polar(center, radius * MARKER_BASE_R, angle - half_width_deg),
-                _polar(center, radius * MARKER_BASE_R, angle + half_width_deg),
-            ]))
+            painter.drawPolygon(
+                QPolygonF(
+                    [
+                        _polar(center, radius * MARKER_TIP_R, angle),
+                        _polar(center, radius * MARKER_BASE_R, angle - half_width_deg),
+                        _polar(center, radius * MARKER_BASE_R, angle + half_width_deg),
+                    ]
+                )
+            )
 
     def _paint_needle(self, painter: QPainter, geometry: _Geometry) -> None:
         center, radius = geometry.center, geometry.radius
@@ -532,8 +575,16 @@ class AnalogGauge(QWidget):
         painter.rotate(-self._angle(self._needle))
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(color)
-        painter.drawPolygon(QPolygonF([QPointF(-tail, -half_width), QPointF(tip, -half_width * 0.25),
-                                       QPointF(tip, half_width * 0.25), QPointF(-tail, half_width)]))
+        painter.drawPolygon(
+            QPolygonF(
+                [
+                    QPointF(-tail, -half_width),
+                    QPointF(tip, -half_width * 0.25),
+                    QPointF(tip, half_width * 0.25),
+                    QPointF(-tail, half_width),
+                ]
+            )
+        )
         painter.restore()
         hub = radius * HUB_R
         painter.setPen(_pen(theme.BORDER_STRONG, 1.0))

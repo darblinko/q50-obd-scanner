@@ -39,8 +39,7 @@ class Backend:
     """`vehicle` selects module tables, protocol and decoding; `adapter_key` and
     `bus` select the adapter profile and CAN bus for real ports."""
 
-    def __init__(self, vehicle: VehicleProfile | None = None, adapter_key: str | None = None,
-                 bus: str = "hs") -> None:
+    def __init__(self, vehicle: VehicleProfile | None = None, adapter_key: str | None = None, bus: str = "hs") -> None:
         from q50diag.transport.adapters import DEFAULT_ADAPTER_KEY
         from q50diag.vehicles import default_vehicle
 
@@ -155,8 +154,13 @@ class Backend:
         vehicle = self.vehicle
         on_bus = self.scan_modules()
         return discover_modules(
-            t, progress, stop, modules=on_bus, probes=vehicle.discovery_probes,
-            sweep_protocol=vehicle.sweep_protocol, response_offsets=vehicle.response_offsets,
+            t,
+            progress,
+            stop,
+            modules=on_bus,
+            probes=vehicle.discovery_probes,
+            sweep_protocol=vehicle.sweep_protocol,
+            response_offsets=vehicle.response_offsets,
             reserved=tuple(m for m in self.known_modules() if m not in on_bus),
         )
 
@@ -172,8 +176,9 @@ class Backend:
     ) -> dict[int, bytes]:
         from q50diag.protocol.explorer import scan_identifiers
 
-        return scan_identifiers(t, m, service, start, end, progress=progress, stop=stop,
-                                session=self.vehicle.diag.ensure_session)
+        return scan_identifiers(
+            t, m, service, start, end, progress=progress, stop=stop, session=self.vehicle.diag.ensure_session
+        )
 
     def diff_snapshots(self, a: dict[int, bytes], b: dict[int, bytes]) -> dict[int, list[int]]:
         from q50diag.protocol.explorer import diff_snapshots
@@ -197,5 +202,7 @@ class Backend:
         """Vehicle DTC names and module naming: generic decoders label OBD-II
         codes "ECM" and use the Nissan table."""
         engine = self.obd_module_name()
-        return [replace(d, module=engine if d.module == "ECM" else d.module, description=self.describe(d.code))
-                for d in dtcs]
+        return [
+            replace(d, module=engine if d.module == "ECM" else d.module, description=self.describe(d.code))
+            for d in dtcs
+        ]

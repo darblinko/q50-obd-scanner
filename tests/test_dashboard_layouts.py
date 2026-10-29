@@ -88,18 +88,21 @@ def test_with_slot_extends_and_returns_new_layout():
     assert cleared.slots[0] is None
 
 
-@pytest.mark.parametrize("value, expected", [
-    ((0, 10), (0.0, 10.0)),
-    ([1.5, 2], (1.5, 2.0)),
-    ((10, 0), None),
-    ((5, 5), None),
-    ((0, math.inf), None),
-    ((math.nan, 1), None),
-    (("a", 1), None),
-    ((1,), None),
-    (None, None),
-    ((True, 3), None),
-])
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ((0, 10), (0.0, 10.0)),
+        ([1.5, 2], (1.5, 2.0)),
+        ((10, 0), None),
+        ((5, 5), None),
+        ((0, math.inf), None),
+        ((math.nan, 1), None),
+        (("a", 1), None),
+        ((1,), None),
+        (None, None),
+        ((True, 3), None),
+    ],
+)
 def test_valid_range(value, expected):
     assert valid_range(value) == expected
 

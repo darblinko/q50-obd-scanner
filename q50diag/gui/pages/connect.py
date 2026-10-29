@@ -36,8 +36,11 @@ CHECKLIST = (
     ("Ignition ON", "Ignition ON (engine off) is enough to read codes and identification."),
     ("Engine running", "Run the engine for live engine data and for steering work, which needs charging voltage."),
     ("Adapter firmware", "Update the adapter firmware with the vendor tool before first use."),
-    ("CAN bus", "HS-CAN (pins 6/14) carries OBD-II and most modules. Ford MS-CAN (pins 3/11) needs an "
-                "adapter and bus that support it."),
+    (
+        "CAN bus",
+        "HS-CAN (pins 6/14) carries OBD-II and most modules. Ford MS-CAN (pins 3/11) needs an "
+        "adapter and bus that support it.",
+    ),
     ("One tool at a time", "Close other OBD apps that may hold the port."),
 )
 
@@ -122,8 +125,14 @@ class ConnectPage(Page):
         grid = QGridLayout()
         grid.setHorizontalSpacing(16)
         grid.setVerticalSpacing(6)
-        rows = (("Vehicle", self.vehicle_box), (None, self.vehicle_note), ("Adapter", self.adapter_box),
-                ("CAN bus", self.bus_box), (None, self.adapter_note), (None, self.lock_note))
+        rows = (
+            ("Vehicle", self.vehicle_box),
+            (None, self.vehicle_note),
+            ("Adapter", self.adapter_box),
+            ("CAN bus", self.bus_box),
+            (None, self.adapter_note),
+            (None, self.lock_note),
+        )
         for row, (title, widget) in enumerate(rows):
             if title:
                 grid.addWidget(label(title, "dim"), row, 0)
@@ -141,8 +150,13 @@ class ConnectPage(Page):
         grid.setVerticalSpacing(6)
         self.detail_labels: dict[str, object] = {}
         for row, (key, title) in enumerate(
-            (("port", "Port"), ("identity", "Identity"), ("description", "Description"),
-             ("protocol", "Protocol"), ("voltage", "Voltage"))
+            (
+                ("port", "Port"),
+                ("identity", "Identity"),
+                ("description", "Description"),
+                ("protocol", "Protocol"),
+                ("voltage", "Voltage"),
+            )
         ):
             grid.addWidget(label(title, "dim"), row, 0)
             value = label("--", "mono")
@@ -318,4 +332,3 @@ class ConnectPage(Page):
     def on_shown(self) -> None:
         if not self._connected:
             self.refresh_ports()
-

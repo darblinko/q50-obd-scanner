@@ -421,9 +421,7 @@ class SteeringPage(Page):
             self._add_eps_row(dtc)
         has_fault = any(dtc_color(d.code) == theme.FAULT for d in dtcs)
         self.eps_card.set_state("fault" if has_fault else state if responding is not None else None)
-        self.eps_note.setText(
-            f"{len(dtcs)} {source}. Code meanings are generic Nissan EPS, not Q50 confirmed."
-        )
+        self.eps_note.setText(f"{len(dtcs)} {source}. Code meanings are generic Nissan EPS, not Q50 confirmed.")
 
     def _add_eps_row(self, dtc: Dtc) -> None:
         row = self.eps_table.rowCount()

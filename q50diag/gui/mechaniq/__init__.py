@@ -59,8 +59,9 @@ def _wire_runtime(controller: MechaniqController, window, ctx) -> None:
     controller.set_change_tools(change_log, HotReloader(window, ctx))
     server = build_mcp_server(ctx, lambda: window, controller.apply_change, controller.undo_change)
     guard = make_guard(PROJECT_ROOT, DEFAULT_PATH)
-    controller.set_runner(MechaniqRunner(PROJECT_ROOT, server, guard, settings=settings,
-                                         system_append=lambda: _system_append_for(ctx)))
+    controller.set_runner(
+        MechaniqRunner(PROJECT_ROOT, server, guard, settings=settings, system_append=lambda: _system_append_for(ctx))
+    )
 
 
 def _system_append_for(ctx) -> str:

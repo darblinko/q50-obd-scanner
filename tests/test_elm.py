@@ -23,8 +23,22 @@ def elm(monkeypatch):
 def test_initialization_and_voltage(elm):
     transport, fake = elm
     commands = [data.decode().strip() for data in fake.writes]
-    for command in ("ATZ", "ATE0", "ATL0", "ATS1", "ATH1", "ATAT1", "STI", "STDI", "STP33", "ATCAF1",
-                    "ATI", "ATRV", "0100", "ATDP"):
+    for command in (
+        "ATZ",
+        "ATE0",
+        "ATL0",
+        "ATS1",
+        "ATH1",
+        "ATAT1",
+        "STI",
+        "STDI",
+        "STP33",
+        "ATCAF1",
+        "ATI",
+        "ATRV",
+        "0100",
+        "ATDP",
+    ):
         assert command in commands
     assert not any(command.startswith("ATSP") for command in commands)
     assert commands.index("0100") < commands.index("ATDP")
@@ -53,7 +67,7 @@ def test_single_multi_cache_and_debug_logging(elm, caplog):
     transport, fake = elm
     caplog.set_level(logging.DEBUG, logger="q50diag.elm")
     fake.writes.clear()
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C") == bytes.fromhex("41 0C 1A F8")
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c") == bytes.fromhex("41 0C 1A F8")
     assert transport.request(0x7E0, 0x7E8, b"\x09\x02") == b"\x49\x02\x01JN1SAMPLEXXXXXXX0"
     assert fake.writes.count(b"ATSH7E0\r") == 1
     assert fake.writes.count(b"ATCRA7E8\r") == 1
@@ -87,7 +101,7 @@ def test_pending_that_never_completes_is_no_response_not_disconnect(elm):
     with pytest.raises(NoResponse):
         transport.request(0x7E0, 0x7E8, b"\x22\x12\x01")
     assert not fake.closed
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C")[0] == 0x41
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c")[0] == 0x41
 
 
 def test_negative_no_data_and_adapter_errors(elm):
@@ -96,10 +110,10 @@ def test_negative_no_data_and_adapter_errors(elm):
     with pytest.raises(NegativeResponse):
         transport.request(0x7E0, 0x7E8, b"\x22\x12\x01")
     with pytest.raises(NoResponse):
-        transport.request(0x7E0, 0x7E8, b"\x01\xFF")
+        transport.request(0x7E0, 0x7E8, b"\x01\xff")
     fake.replies["010C"] = "CAN ERROR"
     with pytest.raises(AdapterReplyError, match="CAN ERROR"):
-        transport.request(0x7E0, 0x7E8, b"\x01\x0C")
+        transport.request(0x7E0, 0x7E8, b"\x01\x0c")
     assert not fake.closed
 
 
@@ -114,7 +128,7 @@ def test_functional_responses(elm):
 @pytest.mark.parametrize("can_ids", [None, {0x002}, {0x002, 0x300}])
 def test_monitor_stops_and_restores_request_mode(elm, can_ids):
     transport, fake = elm
-    transport.request(0x7E0, 0x7E8, b"\x01\x0C")
+    transport.request(0x7E0, 0x7E8, b"\x01\x0c")
     stop = threading.Event()
     monitor = transport.monitor(stop, can_ids)
     frame = next(monitor)
@@ -124,7 +138,7 @@ def test_monitor_stops_and_restores_request_mode(elm, can_ids):
     assert fake.writes.count(b" ") == 1
     assert not fake.monitoring
     assert fake.writes[-3:] == [b"ATCAF1\r", b"ATH1\r", b"ATCRA7E8\r"]
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C")[:2] == b"\x41\x0C"
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c")[:2] == b"\x41\x0c"
 
 
 def test_monitor_close_and_duration(elm):
@@ -158,23 +172,23 @@ def test_serial_disconnect_and_invalid_voltage(elm):
         transport.read_voltage()
     fake.read_error = True
     with pytest.raises(TransportError, match="USB disconnected"):
-        transport.request(0x7E0, 0x7E8, b"\x01\x0C")
+        transport.request(0x7E0, 0x7E8, b"\x01\x0c")
 
 
 def test_prompt_timeout_interrupts(elm):
     transport, fake = elm
     fake.replies["010C"] = None
     with pytest.raises(NoResponse, match="prompt"):
-        transport.request(0x7E0, 0x7E8, b"\x01\x0C", timeout_s=0.005)
+        transport.request(0x7E0, 0x7E8, b"\x01\x0c", timeout_s=0.005)
     assert fake.writes[-1] == b" "
     fake.replies["010C"] = "7E8 04 41 0C 1A F8"
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C") == bytes.fromhex("41 0C 1A F8")
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c") == bytes.fromhex("41 0C 1A F8")
 
 
 def test_physical_response_ignores_other_ecus(elm):
     transport, fake = elm
     fake.replies["010C"] = "7E9 03 7F 01 31\r7E8 04 41 0C 1A F8"
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C") == bytes.fromhex("41 0C 1A F8")
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c") == bytes.fromhex("41 0C 1A F8")
 
 
 def test_body_module_flow_control_and_functional_restore(elm):
@@ -183,7 +197,7 @@ def test_body_module_flow_control_and_functional_restore(elm):
     assert transport.request(0x742, 0x762, b"\x21\x83") == b"\x61\x83ABCDEFG"
     assert all(command in fake.writes for command in (b"ATFCSH742\r", b"ATFCSD300000\r", b"ATFCSM1\r"))
     before = len(fake.writes)
-    transport.request_functional(b"\x01\x0C")
+    transport.request_functional(b"\x01\x0c")
     assert b"ATFCSM0\r" in fake.writes[before:]
 
 
@@ -204,7 +218,7 @@ def test_monitor_buffer_full_ends_window_without_disconnect(elm):
     assert [frame.can_id for frame in frames] == [0x300]
     assert b" " not in fake.writes
     assert not fake.closed
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C")[0] == 0x41
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c")[0] == 0x41
 
 
 def test_monitor_mask_software_filters_superset(elm):
@@ -302,7 +316,7 @@ def test_monitor_interrupt_retries_when_first_space_is_ignored(elm, monkeypatch)
     assert list(monitor) == []
     assert fake.writes.count(b" ") == 2
     assert not fake.closed
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C")[0] == 0x41
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c")[0] == 0x41
 
 
 def open_device(monkeypatch, device, bus="hs", adapter_key="vlinker_fs"):
@@ -323,15 +337,18 @@ def protocol_commands(commands):
     return [command for command in commands if command.startswith(("ATSP", "STP"))]
 
 
-@pytest.mark.parametrize("device, adapter_key, bus, protocol", [
-    ("vlinker", "vlinker_fs", "hs", ["STP33"]),
-    ("vlinker", "vlinker_fs", "ms", ["STP53"]),
-    ("vlinker", "vlinker_fs", "ms500", ["STP53", "STPBR500000"]),
-    ("obdlink_ex", "obdlink_ex", "hs", ["STP33"]),
-    ("obdlink_ex", "obdlink_ex", "ms", ["STP53"]),
-    ("obdlink_ex", "obdlink_ex", "ms500", ["STP53", "STPBR500000"]),
-    ("elm327", "vlinker_fs", "hs", ["ATSP6"]),
-])
+@pytest.mark.parametrize(
+    "device, adapter_key, bus, protocol",
+    [
+        ("vlinker", "vlinker_fs", "hs", ["STP33"]),
+        ("vlinker", "vlinker_fs", "ms", ["STP53"]),
+        ("vlinker", "vlinker_fs", "ms500", ["STP53", "STPBR500000"]),
+        ("obdlink_ex", "obdlink_ex", "hs", ["STP33"]),
+        ("obdlink_ex", "obdlink_ex", "ms", ["STP53"]),
+        ("obdlink_ex", "obdlink_ex", "ms500", ["STP53", "STPBR500000"]),
+        ("elm327", "vlinker_fs", "hs", ["ATSP6"]),
+    ],
+)
 def test_initialization_per_device_and_bus(monkeypatch, device, adapter_key, bus, protocol):
     transport, fake, _ = open_device(monkeypatch, device, bus, adapter_key)
     commands = fake.commands
@@ -343,11 +360,18 @@ def test_initialization_per_device_and_bus(monkeypatch, device, adapter_key, bus
     transport.close()
 
 
-@pytest.mark.parametrize("device, identity", [
-    ("vlinker", "vLinker FS r2"), ("obdlink_ex", "OBDLink EX r1.0.0"), ("elm327", "ELM327 v2.2"),
-])
+@pytest.mark.parametrize(
+    "device, identity",
+    [
+        ("vlinker", "vLinker FS r2"),
+        ("obdlink_ex", "OBDLink EX r1.0.0"),
+        ("elm327", "ELM327 v2.2"),
+    ],
+)
 def test_device_identity_and_adapter_info(monkeypatch, device, identity):
-    transport, fake, info = open_device(monkeypatch, device, adapter_key="obdlink_ex" if device == "obdlink_ex" else "vlinker_fs")
+    transport, fake, info = open_device(
+        monkeypatch, device, adapter_key="obdlink_ex" if device == "obdlink_ex" else "vlinker_fs"
+    )
     assert transport.device_identity == identity
     if device == "elm327":
         assert "STDI" not in fake.commands
@@ -369,15 +393,20 @@ def test_plain_elm_cannot_select_ms_can(monkeypatch, bus):
     assert not any(command.startswith(("ATSP", "STP")) for command in fake.commands)
 
 
-@pytest.mark.parametrize("device, bus, protocol", [
-    ("obdlink_ex", "ms", ["STP53"]), ("obdlink_ex", "ms500", ["STP53", "STPBR500000"]),
-    ("vlinker", "hs", ["STP33"]), ("elm327", "hs", ["ATSP6"]),
-])
+@pytest.mark.parametrize(
+    "device, bus, protocol",
+    [
+        ("obdlink_ex", "ms", ["STP53"]),
+        ("obdlink_ex", "ms500", ["STP53", "STPBR500000"]),
+        ("vlinker", "hs", ["STP33"]),
+        ("elm327", "hs", ["ATSP6"]),
+    ],
+)
 def test_prepare_reapplies_selected_protocol(monkeypatch, device, bus, protocol):
     transport, fake, _ = open_device(monkeypatch, device, bus)
     transport.raw_command("ATCAF0")
     fake.writes.clear()
-    transport.request(0x7E0, 0x7E8, b"\x01\x0C")
+    transport.request(0x7E0, 0x7E8, b"\x01\x0c")
     commands = fake.commands
     assert protocol_commands(commands) == protocol
     assert commands.index(protocol[-1]) < commands.index("010C")
@@ -388,7 +417,7 @@ def test_identity_reads_do_not_dirty_settings(monkeypatch):
     assert transport.raw_command("STDI") == "OBDLink EX r1.0.0"
     assert transport.raw_command("STI") == "STN2230 v5.6.19"
     fake.writes.clear()
-    transport.request(0x7E0, 0x7E8, b"\x01\x0C")
+    transport.request(0x7E0, 0x7E8, b"\x01\x0c")
     assert "STP53" not in fake.commands
 
 
@@ -399,7 +428,7 @@ def test_identity_mismatch_warns_and_keeps_connection(monkeypatch, caplog):
     assert transport.detected_adapter.key == "obdlink_ex"
     assert "OBDLink EX USB" in caplog.text and "Vgate vLinker FS USB" in caplog.text
     assert "STP53" in fake.commands
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C")[0] == 0x41
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c")[0] == 0x41
 
 
 def test_identity_match_has_no_warning(monkeypatch, caplog):
@@ -434,7 +463,7 @@ def test_silent_sti_is_treated_as_plain_elm(monkeypatch):
     transport.open()
     assert b" " in fake.writes
     assert "ATSP6" in fake.commands and transport.device_identity == "ELM327 v2.2"
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C")[0] == 0x41
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c")[0] == 0x41
 
 
 def test_out_of_memory_is_an_adapter_error(elm):
@@ -443,7 +472,7 @@ def test_out_of_memory_is_an_adapter_error(elm):
     with pytest.raises(AdapterReplyError, match="OUT OF MEMORY"):
         transport.request(0x743, 0x763, b"\x21\x01")
     assert not fake.closed
-    assert transport.request(0x7E0, 0x7E8, b"\x01\x0C")[0] == 0x41
+    assert transport.request(0x7E0, 0x7E8, b"\x01\x0c")[0] == 0x41
 
 
 def test_console_blocks_nvm_reset(elm):

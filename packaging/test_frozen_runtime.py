@@ -31,7 +31,9 @@ def test_q50diag_loads_from_editable_workspace_source():
 def test_sdk_finds_bundled_cli_and_it_runs():
     path = Path(SubprocessCLITransport(prompt="x", options=ClaudeAgentOptions())._find_cli())
     assert path.parent.parts[-2:] == ("claude_agent_sdk", "_bundled")
-    result = subprocess.run([str(path), "--version"], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120)
+    result = subprocess.run(
+        [str(path), "--version"], stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120
+    )
     assert result.returncode == 0, result.stderr
     assert "Claude Code" in result.stdout
 

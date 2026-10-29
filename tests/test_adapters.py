@@ -56,13 +56,16 @@ def test_profiles_are_frozen():
     assert isinstance(MS_CAN, BusConfig)
 
 
-@pytest.mark.parametrize("text, expected", [
-    ("OBDLink EX r1.0.0", "obdlink_ex"),
-    ("FT231X USB UART (OBDLink EX)", "obdlink_ex"),
-    ("obdlink ex", "obdlink_ex"),
-    ("vLinker FS r2", "vlinker_fs"),
-    ("VLINKER FS USB", "vlinker_fs"),
-])
+@pytest.mark.parametrize(
+    "text, expected",
+    [
+        ("OBDLink EX r1.0.0", "obdlink_ex"),
+        ("FT231X USB UART (OBDLink EX)", "obdlink_ex"),
+        ("obdlink ex", "obdlink_ex"),
+        ("vLinker FS r2", "vlinker_fs"),
+        ("VLINKER FS USB", "vlinker_fs"),
+    ],
+)
 def test_guess_adapter_matches_identity_tokens(text, expected):
     assert guess_adapter(text).key == expected
 

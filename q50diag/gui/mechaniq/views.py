@@ -52,8 +52,9 @@ def _block_format(top_margin: float) -> QTextBlockFormat:
     return block
 
 
-def _char_format(color: str, bold: bool = False, point_size: float | None = None,
-                 mono: bool = False) -> QTextCharFormat:
+def _char_format(
+    color: str, bold: bool = False, point_size: float | None = None, mono: bool = False
+) -> QTextCharFormat:
     char = QTextCharFormat()
     char.setForeground(QColor(color))
     if bold:
@@ -70,8 +71,13 @@ class TranscriptView(QTextBrowser):
     the entries from the first one that changed, so streamed text does not
     re-render the whole conversation for every chunk."""
 
-    def __init__(self, model: MechaniqModel | None = None, agent_id: str = LEAD,
-                 speaker: str = "MechanIQ", parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        model: MechaniqModel | None = None,
+        agent_id: str = LEAD,
+        speaker: str = "MechanIQ",
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setOpenExternalLinks(True)
         self.setObjectName("MechaniqTranscript")
@@ -146,8 +152,11 @@ class TranscriptView(QTextBrowser):
         if entry.kind == "tool":
             self._insert_tool_line(cursor, entry)
             return
-        headings = {"assistant": (self.speaker.upper(), theme.ACCENT), "user": ("YOU", theme.TEXT_DIM),
-                    "task": ("TASK FROM LEAD", theme.TEXT_DIM)}
+        headings = {
+            "assistant": (self.speaker.upper(), theme.ACCENT),
+            "user": ("YOU", theme.TEXT_DIM),
+            "task": ("TASK FROM LEAD", theme.TEXT_DIM),
+        }
         if entry.kind in headings:
             heading, color = headings[entry.kind]
             cursor.insertText(heading, _char_format(color, bold=True, point_size=8))
@@ -233,7 +242,7 @@ class AgentChips(QWidget):
         while self.layout_.count():
             self.layout_.takeAt(0)
         agents = self.model.agents()
-        shown = [agents[0], *agents[1:][-(self.limit - 1):]] if len(agents) > self.limit else agents
+        shown = [agents[0], *agents[1:][-(self.limit - 1) :]] if len(agents) > self.limit else agents
         for agent in shown:
             chip = self._chip(_short(agent.title), agent.state)
             chip.setToolTip(f"{agent.title}: {AGENT_STATE_LABELS.get(agent.state, agent.state)}")
@@ -342,8 +351,9 @@ class ChangesView(QScrollArea):
         for row in self.rows:
             self._layout.addWidget(row)
         if not self.rows:
-            empty = label("No changes yet. Code changes MechanIQ makes are tested, reloaded, "
-                          "committed and listed here.", "dim")
+            empty = label(
+                "No changes yet. Code changes MechanIQ makes are tested, reloaded, committed and listed here.", "dim"
+            )
             empty.setWordWrap(True)
             self._layout.addWidget(empty)
         self._layout.addStretch(1)
@@ -354,4 +364,3 @@ def header_info(model: MechaniqModel) -> str:
     if model.total_cost:
         parts.append(f"${model.total_cost:.2f}")
     return ", ".join(parts)
-

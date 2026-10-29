@@ -7,8 +7,7 @@ from q50diag.core.types import ModuleAddress, ParameterDef, Reading
 from q50diag.protocol import nissan
 
 
-def read_parameter(t: Transport, module: ModuleAddress, param: ParameterDef,
-                   session=nissan.ensure_session) -> Reading:
+def read_parameter(t: Transport, module: ModuleAddress, param: ParameterDef, session=nissan.ensure_session) -> Reading:
     """`session(t, module)` runs before 21/22 reads on KWP modules (Nissan by default)."""
     raw = b""
     try:
@@ -34,7 +33,7 @@ def decode_reply(param: ParameterDef, raw: bytes) -> Reading:
 def _decode(param: ParameterDef, raw: bytes):
     service = param.request[0]
     width = {0x01: 1, 0x02: 2, 0x21: 1, 0x22: 2}.get(service, 0)
-    expected = bytes((service + 0x40,)) + param.request[1:1 + width]
+    expected = bytes((service + 0x40,)) + param.request[1 : 1 + width]
     if not raw.startswith(expected):
         raise ValueError(f"Unexpected response echo: {raw.hex(' ')}")
-    return param.decode(raw[len(expected):])
+    return param.decode(raw[len(expected) :])
