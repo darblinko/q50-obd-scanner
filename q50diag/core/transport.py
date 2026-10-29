@@ -44,7 +44,8 @@ class RequestBlocked(Exception):
 # OBD-II read modes. 0x04 (clear) is in CLEAR_SERVICES; 0x08 (on-board test
 # control) actuates components and is excluded.
 OBD_SERVICES = {0x01, 0x02, 0x03, 0x05, 0x06, 0x07, 0x09, 0x0A}
-# KWP2000 / UDS read services.
+# KWP2000 / UDS read services. No q50diag code builds a 0x17 request; 0x17 is allowed
+# for raw reads only: a hex line typed on the Console page or passed to the agent's raw_read.
 READ_SERVICES = {0x17, 0x18, 0x19, 0x1A, 0x21, 0x22}
 CLEAR_SERVICES = {0x04, 0x14}
 TESTER_PRESENT = 0x3E

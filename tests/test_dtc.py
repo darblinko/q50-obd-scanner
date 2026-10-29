@@ -1,6 +1,7 @@
 import pytest
 
-from q50diag.data.dtc_descriptions import describe
+from q50diag.data import dtc_descriptions
+from q50diag.data.dtc_descriptions import describe, describe_generic, load_descriptions, parse_descriptions
 from q50diag.protocol.dtc import decode_kwp_dtc_response, decode_two_byte, decode_uds_dtc_response
 
 

@@ -238,7 +238,7 @@ def eps_fields(module: ModuleAddress) -> list[ParameterDef]:
             _word(0, 0.004),
             0,
             20,
-            "14.0-14.2 V at rest (ATRV 14.0 V); dipped to 13.26 V under full-lock load.",
+            "14.0-14.25 V at rest (ATRV 14.0 V); dipped to 13.26 V under full-lock load.",
         ),
         _eps_field(
             module,

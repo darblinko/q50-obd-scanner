@@ -18,7 +18,7 @@ PROMPT_NOTES = """
   no 22 xxxx DIDs. 21 01 is a 21-byte live block: bytes 0-1 supply voltage x 4 mV, bytes 3-4
   steering angle signed x -0.1 deg, bytes 5-6 steering velocity (inferred), byte 7 assist load
   (inferred), byte 8 driver torque signed (inferred), byte 10 temperature candidate, byte 11 assist
-  limit candidate (100 in every sample so far).
+  limit candidate (100 in every sample so far), bytes 15-16 motor speed candidate (inferred).
 - ABS at 0x740/0x760 gives steering angle via 22 1208. Stored codes seen on 2026-10-17: RADAR
   C1A01-00 and C1A16-00, AIR BAG B00A0-00; EPS, ECM and ABS clean.
 - Findings so far: docs/q50-findings-2026-10-17.md. Background research: docs/research/.
