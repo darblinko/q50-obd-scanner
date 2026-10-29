@@ -1,19 +1,19 @@
 {
-  "meta": {"repo": "obd-scanner", "revision": "4f6100b", "measured": "2026-10-28"},
+  "meta": {"repo": "obd-scanner", "revision": "90f6a8a", "measured": "2026-10-28"},
   "charts": [
     {"name": "overview", "type": "stats", "title": "Project at a glance",
      "source": "q50diag/mechaniq/tools.py, q50diag/core/transport.py, q50diag/protocol/obd2.py, uv run pytest --collect-only -q",
-     "alt": "18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 700 tests that need no adapter or API key.",
+     "alt": "18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 714 tests that need no adapter or API key.",
      "tiles": [
        {"label": "MCP tools for the agent", "value": "18", "note": "TOOL_SPECS, tools.py"},
        {"label": "Allowed service IDs", "value": "16", "note": "core/transport.py"},
        {"label": "OBD-II mode 01 PIDs", "value": "218", "note": "MODE01_PIDS, obd2.py"},
-       {"label": "Tests, no hardware", "value": "700", "note": "pytest --collect-only"}
+       {"label": "Tests, no hardware", "value": "714", "note": "pytest --collect-only"}
      ]},
     {"name": "guard-cases", "type": "hbar", "title": "Guard hook test cases per rule",
-     "subtitle": "tests/test_mechaniq_guard.py, all passing at 4f6100b",
+     "subtitle": "tests/test_mechaniq_guard.py, all passing at 90f6a8a",
      "source": "uv run pytest --collect-only -q tests/test_mechaniq_guard.py",
-     "alt": "Deny cases: 12 for .env and settings file access, 6 for serial ports, 5 for writes outside the project, 4 each for Bash writes outside the project, git push and destructive git, 1 for PowerShell. Allow cases: 13 ordinary Bash commands and 9 project file tool calls.",
+     "alt": "Deny cases: 12 for .env and settings file access, 6 for serial ports, 5 for writes outside the project, 4 each for Bash writes outside the project, git push and destructive git, 1 for PowerShell. Allow cases: 13 ordinary Bash commands and 9 file, MCP and Task tool calls.",
      "data": [
        {"label": "deny: .env and settings file", "value": 12, "status": "pass"},
        {"label": "deny: serial port access", "value": 6, "status": "pass"},
@@ -23,7 +23,7 @@
        {"label": "deny: git reset --hard, git clean", "value": 4, "status": "pass"},
        {"label": "deny: PowerShell", "value": 1, "status": "pass"},
        {"label": "allow: ordinary Bash", "value": 13, "status": "pass"},
-       {"label": "allow: project file tools", "value": 9, "status": "pass"}
+       {"label": "allow: file, MCP and Task tools", "value": 9, "status": "pass"}
      ]},
     {"name": "gate-cases", "type": "hbar", "title": "Blocked vehicle requests tested per entry point",
      "subtitle": "Transport bars: the 10 payloads in BLOCKED, tests/test_backend_integration.py",

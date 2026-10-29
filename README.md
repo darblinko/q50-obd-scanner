@@ -4,7 +4,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/overview-dark.svg">
-  <img alt="18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 700 tests that need no adapter or API key." src="docs/figures/overview-light.svg" width="760">
+  <img alt="18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 714 tests that need no adapter or API key." src="docs/figures/overview-light.svg" width="760">
 </picture>
 
 <details><summary>Data table</summary>
@@ -14,7 +14,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 | MCP tools exposed to the agent | 18 | `TOOL_SPECS` in q50diag/mechaniq/tools.py |
 | Service IDs on the request allowlist | 16 | q50diag/core/transport.py |
 | OBD-II mode 01 definitions | 218 | `MODE01_PIDS` in q50diag/protocol/obd2.py |
-| Tests, no adapter or API key | 700 | `uv run pytest --collect-only -q` |
+| Tests, no adapter or API key | 714 | `uv run pytest --collect-only -q` |
 
 </details>
 
@@ -25,7 +25,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 - Pages for overview, trouble codes, per-module identification and identifier explorer, live data and gauges, a steering (EPS) watch with event marks, passive bus monitor, raw console and CSV recordings.
 - MechanIQ, a Claude Agent SDK agent in a side panel, reads live values, scans codes, marks events and analyses recordings through 18 MCP tools. It can also edit the app's own source: `apply_change` runs the related tests, hot reloads the changed modules and commits locally, or rejects the change.
 - A PreToolUse guard hook blocks the agent's writes outside the project, serial port access, `.env` and settings file access, `git push` and destructive git commands.
-- A simulator transport replays a 90 s drive cycle for each vehicle profile, so the GUI, the agent tools and all 700 tests run without an adapter.
+- A simulator transport replays a 90 s drive cycle for each vehicle profile, so the GUI, the agent tools and all 714 tests run without an adapter.
 
 <p align="center"><img src="docs/images/steering-simulator.png" alt="Steering page on the simulator: battery, speed, RPM, steering angle and EPS readouts, charts with two event marks, and the MechanIQ panel on the right." width="760"></p>
 
@@ -53,7 +53,7 @@ flowchart TB
 
 **Request gate.** Every request from the GUI, the console, discovery and the agent passes `check_request_allowed` in `q50diag/core/transport.py`. It is an allowlist: OBD modes 01, 02, 03, 05, 06, 07, 09, 0A; services 17, 18, 19, 1A, 21, 22; tester present 3E; and session control 10 only with sub-functions 01, 03, 81, 89 or C0. Clear codes (04, 14) pass only with `allow_clear=True`, which the Trouble Codes page sets after a confirmation dialog. Everything else, including ECU reset 11, security access 27, write 2E, I/O control 2F, routine 31, download 34, OBD mode 08 and the programming session 10 02, raises `RequestBlocked`. Module discovery sweeps 0x700 to 0x7FF with tester present (`3E 00`) only and never transmits on an ID that a known ECU or OBD-II uses for responses (`q50diag/protocol/discovery.py`).
 
-**Tool boundary.** The agent gets no serial port. `create_sdk_mcp_server` in `q50diag/mechaniq/tools.py` exposes 18 tools that call into the running app on the Qt main thread: `get_status`, `list_parameters`, `get_readings`, `get_dtcs`, `scan_dtcs`, `read_module`, `start_polling`, `stop_polling`, `start_steering_watch`, `stop_steering_watch`, `mark_event`, `list_recordings`, `read_recording`, `raw_read`, `read_app_log`, `navigate`, `apply_change`, `undo_change`. `raw_read` sends one hex request through the same allowlist and without `allow_clear`, so the agent cannot clear codes. Three subagents are defined in `q50diag/mechaniq/prompt.py`: `code-fixer`, and `data-analyst` and `test-coach`, which have the edit tools and `apply_change` disallowed.
+**Tool boundary.** The agent gets no serial port. `create_sdk_mcp_server` in `q50diag/mechaniq/tools.py` exposes 18 tools that call into the running app on the Qt main thread: `get_status`, `list_parameters`, `get_readings`, `get_dtcs`, `scan_dtcs`, `read_module`, `start_polling`, `stop_polling`, `start_steering_watch`, `stop_steering_watch`, `mark_event`, `list_recordings`, `read_recording`, `raw_read`, `read_app_log`, `navigate`, `apply_change`, `undo_change`. `raw_read` sends one hex request through the same allowlist and without `allow_clear`, so the agent cannot clear codes. Three subagents are defined in `q50diag/mechaniq/prompt.py`: `code-fixer`, and `data-analyst` and `test-coach`, which have the edit tools and `apply_change` disallowed. `test-coach` also has Bash disallowed; `data-analyst` keeps Bash to compute statistics with Python in a source checkout.
 
 **Guard hook.** The agent runs with `permission_mode="bypassPermissions"` (`q50diag/mechaniq/runner.py`), so one PreToolUse hook (`q50diag/mechaniq/guard.py`) is the boundary. It inspects Write, Edit, MultiEdit, NotebookEdit, Read, Grep, Glob and Bash, and denies PowerShell outright. Bash commands are split into shell segments with `shlex`, so a commit message that mentions `/dev/ttyUSB0` is not treated as a command; redirect and `tee` targets are checked as file writes. Serial access is matched as `/dev/tty`, `/dev/serial`, `COMn`, `serial.Serial(`, `serial_for_url` and `miniterm`. Windows backslash paths are normalized before the `.env` check. Each denial returns `permissionDecision: "deny"` with a reason that tells the agent what to do instead.
 
@@ -81,13 +81,13 @@ Source: `docs/q50-findings-2026-10-17.md`
 
 </details>
 
-Source: [docs/q50-findings-2026-10-17.md](docs/q50-findings-2026-10-17.md), one session with a vLinker FS (STN1170) at 115200 baud, about 16 ms per command. No public source gives EPS identifiers for the Q50 ([docs/research/q50-diagnostics.md](docs/research/q50-diagnostics.md)); the EPS module answered Nissan local identifiers `21 xx` only, and the 21-byte `21 01` record was decoded from 97 samples at rest and 215 during lock-to-lock turns. Supply voltage (bytes 0 and 1) matches `ATRV`; steering angle (bytes 3 and 4) correlates at -1.00 with the ABS angle. Steering velocity, assist load, driver torque, temperature and assist limit are inferred and unconfirmed. The reported intermittent heavy steering was not reproduced while EPS data was captured.
+Source: [docs/q50-findings-2026-10-17.md](docs/q50-findings-2026-10-17.md), one session with a vLinker FS (STN1170) at 115200 baud, about 16 ms per command. No public source gives EPS identifiers for the Q50 ([docs/research/q50-diagnostics.md](docs/research/q50-diagnostics.md)); the EPS module answered Nissan local identifiers `21 xx` only, and the 21-byte `21 01` record was decoded from 97 samples at rest and 215 during lock-to-lock turns. Supply voltage (bytes 0 and 1) matches `ATRV`; steering angle (bytes 3 and 4) correlates at -1.00 with the ABS angle. Steering velocity, assist load, driver torque, temperature, assist limit and a motor speed candidate (bytes 15 and 16) are inferred and unconfirmed. The reported intermittent heavy steering was not reproduced while EPS data was captured.
 
 ### Safety tests
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/guard-cases-dark.svg">
-  <img alt="Deny cases: 12 for .env and settings file access, 6 for serial ports, 5 for writes outside the project, 4 each for Bash writes outside the project, git push and destructive git, 1 for PowerShell. Allow cases: 13 ordinary Bash commands and 9 project file tool calls." src="docs/figures/guard-cases-light.svg" width="760">
+  <img alt="Deny cases: 12 for .env and settings file access, 6 for serial ports, 5 for writes outside the project, 4 each for Bash writes outside the project, git push and destructive git, 1 for PowerShell. Allow cases: 13 ordinary Bash commands and 9 file, MCP and Task tool calls." src="docs/figures/guard-cases-light.svg" width="760">
 </picture>
 
 <details><summary>Data table</summary>
@@ -102,7 +102,7 @@ Source: [docs/q50-findings-2026-10-17.md](docs/q50-findings-2026-10-17.md), one 
 | deny: git reset --hard, git clean | 4 (pass) |
 | deny: PowerShell | 1 (pass) |
 | allow: ordinary Bash | 13 (pass) |
-| allow: project file tools | 9 (pass) |
+| allow: file, MCP and Task tools | 9 (pass) |
 
 Source: `uv run pytest --collect-only -q tests/test_mechaniq_guard.py`
 
@@ -146,6 +146,10 @@ MechanIQ is optional; every other page works without it. In a source run it uses
 
 Windows and macOS builds: `.github/workflows/build-apps.yml` builds them with PyInstaller (`packaging/q50diag.spec`) on manual dispatch or a `v*` tag, then runs a simulator smoke test and the shipped test suite inside each build. [packaging/READ-ME-FIRST.txt](packaging/READ-ME-FIRST.txt) is the end user guide shipped in the zip.
 
+## DTC descriptions
+
+No fault-code descriptions ship with this repository. The app reads them from a text file you supply: the path in the environment variable `Q50DIAG_DTC_DESCRIPTIONS`, else `~/.q50diag/dtc_descriptions.txt`. Each line is `CODE|description`; `#` starts a comment; the headers `[generic]`, `[nissan]` and `[ford]` start sections, and entries before any header are generic. A make-specific section applies to that make only. [examples/dtc_descriptions.sample.txt](examples/dtc_descriptions.sample.txt) holds four original entries to copy from.
+
 ## Project layout
 
 | Path | Contents |
@@ -158,7 +162,7 @@ Windows and macOS builds: `.github/workflows/build-apps.yml` builds them with Py
 | q50diag/mechaniq/ | Agent runner, MCP tools, guard hook, prompts, change log, hot reload, settings |
 | q50diag/gui/ | PySide6 pages, widgets and the MechanIQ panel |
 | packaging/ | PyInstaller spec, launcher, frozen runtime checks, end user guide |
-| tests/ | 700 tests in 36 files, including the fake serial adapter |
+| tests/ | 714 tests in 36 files, including the fake serial adapter |
 | docs/ | Q50 findings and research, README figures, landing page, data.json |
 
 ## Design decisions and limitations
@@ -166,9 +170,9 @@ Windows and macOS builds: `.github/workflows/build-apps.yml` builds them with Py
 - The vehicle side uses an allowlist. A new service ID is refused until it is added to `q50diag/core/transport.py`, so a mistyped console request or an agent request cannot reach a write or reset service.
 - The guard hook catches agent mistakes and does not sandbox the agent. `guard.py` states the limit: a script file the agent writes inside the project can still do anything its interpreter allows. Permission prompts or an operating system sandbox would be a stronger boundary; neither is used.
 - Agent edits to the app are local commits. `git push` is denied, and the user reviews and pushes.
-- Field data covers one car, one adapter and one session (2026-10-17). The steering complaint was not reproduced, the drive recording sampled speed and angle only every 3.7 s, and five of the seven decoded EPS fields are inferences. The OBD port on this Q50 is gatewayed (0 broadcast frames in 5 s), so every value is polled.
-- Most Q50 module addresses in `q50diag/protocol/modules.py` come from Leaf, OBDb and opendbc sources and are marked unverified there. The Mustang profiles come from public address lists; this repository holds no field capture from a Mustang. MS-CAN on the vLinker FS is untested (`q50diag/transport/adapters.py`).
-- The DTC table has 465 SAE descriptions and 10 Nissan descriptions (`q50diag/data/dtc_descriptions.py`). Manufacturer codes such as C1A01 need the factory service manual.
+- Field data covers one car, one adapter and one session (2026-10-17). The steering complaint was not reproduced, the drive recording sampled speed and angle only every 3.7 s, and six of the eight decoded EPS fields are inferences. The OBD port on this Q50 is gatewayed (0 broadcast frames in 5 s), so every value is polled.
+- The Q50 module addresses in `q50diag/protocol/modules.py` come from Leaf, OBDb and opendbc sources. 12 of the 15 answered the 2026-10-17 discovery sweep; AWD (748), STEERING ANGLE (75C) and ADAS (707) did not and remain unverified on the Q50. The Mustang profiles come from public address lists; this repository holds no field capture from a Mustang. MS-CAN on the vLinker FS is untested (`q50diag/transport/adapters.py`).
+- The repository ships no DTC descriptions. `q50diag/data/dtc_descriptions.py` loads a user-supplied file (see DTC descriptions below); codes without an entry show an empty description. Manufacturer codes such as C1A01 need the factory service manual.
 - VINs in the simulator and tests are synthetic: the 9th character is a letter, so they fail the check digit. The VIN of the test car is withheld from this repository.
 - There is no Linux desktop build. CI on Linux runs lint and tests only (`.github/workflows/ci.yml`).
 

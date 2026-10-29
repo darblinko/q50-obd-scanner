@@ -23,7 +23,7 @@
       <p class="lede">A desktop diagnostic app that reads every answering module of a car over KWP2000, UDS and OBD-II, with an embedded Claude agent that gets 18 MCP tools and no serial port. For automotive engineers who want manufacturer-level reads from an ELM327-class adapter, and AI engineers who want a worked example of an agent bounded by a tool layer and a PreToolUse hook.</p>
       <dl class="record">
         <div><dt>Repository</dt><dd>darblinko/q50-obd-scanner</dd></div>
-        <div><dt>Revision</dt><dd><code>4f6100b</code></dd></div>
+        <div><dt>Revision</dt><dd><code>90f6a8a</code></dd></div>
         <div><dt>Measured</dt><dd>2026-10-28 (tests), 2026-10-17 (field session)</dd></div>
         <div><dt>License</dt><dd>Apache-2.0</dd></div>
       </dl>
@@ -78,7 +78,7 @@ flowchart TB
         <p>Guard cases: <code>uv run pytest --collect-only -q tests/test_mechaniq_guard.py</code></p>
         <p>Blocked payload list: <code>BLOCKED</code> in <code>tests/test_backend_integration.py</code>.</p>
       </aside>
-      <p>Safety tests in the suite at revision 4f6100b, all passing. The guard cases include allowed commands as controls, so a guard that denies everything would fail them.</p>
+      <p>Safety tests in the suite at revision 90f6a8a, all passing. The guard cases include allowed commands as controls, so a guard that denies everything would fail them.</p>
       <figure class="chart" data-chart="guard-cases"></figure>
       <figure class="chart" data-chart="gate-cases"></figure>
     </section>
@@ -101,7 +101,7 @@ cd obd-scanner</code></pre></li>
       <h2>Limitations</h2>
       <ul>
         <li>Field data covers one car, one adapter and one session. The heavy steering complaint was not reproduced while EPS data was captured.</li>
-        <li>Five of the seven decoded EPS fields (velocity, assist load, driver torque, temperature, assist limit) are inferences.</li>
+        <li>Six of the eight decoded EPS fields (velocity, assist load, driver torque, temperature, assist limit, motor speed) are inferences.</li>
         <li>The OBD port on this Q50 is gatewayed: 0 broadcast frames in a 5 s unfiltered monitor, so every value is polled.</li>
         <li>The Mustang S550 profiles come from public address lists; the repository holds no field capture from a Mustang.</li>
         <li>The guard hook catches agent mistakes and does not sandbox the agent: a script the agent writes can do anything its interpreter allows.</li>
@@ -110,7 +110,7 @@ cd obd-scanner</code></pre></li>
   </main>
 
   <footer>
-    obd-scanner. Apache-2.0. Figures generated from <code>docs/data.json</code> at <code>4f6100b</code>.
+    obd-scanner. Apache-2.0. Figures generated from <code>docs/data.json</code> at <code>90f6a8a</code>.
   </footer>
 
   <script src="charts.js" defer></script>
