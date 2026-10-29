@@ -1,14 +1,21 @@
 [project]
 name = "q50diag"
 version = "0.1.0"
-description = "Diagnostic explorer for a 2017 Infiniti Q50 over a vLinker FS (ELM327-compatible) USB adapter"
+description = "Car diagnostic app for KWP2000, UDS and OBD-II over ELM327-compatible adapters, with an embedded Claude agent"
 requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Mitchell Foutz" }]
 dependencies = [
     "pyserial>=3.5",
     "PySide6>=6.7",
     "pyqtgraph>=0.13",
+    "numpy>=1.25",
     "claude-agent-sdk>=0.2.173",
 ]
+
+[project.urls]
+Repository = "https://github.com/darblinko/q50-obd-scanner"
 
 [project.scripts]
 q50diag = "q50diag.__main__:main"

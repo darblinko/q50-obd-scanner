@@ -6,3 +6,8 @@ logs/
 .superpowers/
 /build/
 /dist/
+.ruff_cache/
+*.egg-info/
+.env
+.env.*
+!.env.example
