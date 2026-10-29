@@ -1,0 +1,166 @@
+# Builds the self-contained Windows and macOS apps with PyInstaller.
+# Manual run: Actions > Build desktop apps > Run workflow (artifacts only).
+# Tag push (v*): also attaches the zips to a GitHub Release. In a private
+# repository only collaborators can download them.
+name: Build desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            label: windows-x64
+          - runner: macos-latest
+            label: macos-arm64
+          # Intel image; listed in actions/runner-images as of 2026-10.
+          # Drop this entry if the label is retired.
+          - runner: macos-15-intel
+            label: macos-intel
+    env:
+      Q50DIAG_BUILD_ID: ${{ github.sha }}-${{ github.run_number }}
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+
+      # The launcher copies the app source here instead of the runner's home.
+      # Forward slashes so the same value works in Git Bash and in Python.
+      - name: Point the app workspace at the runner temp folder
+        shell: bash
+        run: echo "Q50DIAG_HOME=${RUNNER_TEMP//\\//}/q50diag-home" >> "$GITHUB_ENV"
+
+      # pyproject.toml sets python-preference = "only-system", so uv uses this Python.
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - uses: astral-sh/setup-uv@v6
+
+      # The default dev group brings pytest, which the build bundles for
+      # MechanIQ's test gate; the package group brings PyInstaller.
+      - name: Install locked dependencies and PyInstaller
+        run: uv sync --frozen --group package
+
+      - name: Build
+        run: uv run --frozen --no-sync pyinstaller --noconfirm --clean packaging/q50diag.spec
+
+      - name: Locate the built program
+        id: paths
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            echo "exe=dist/q50diag/q50diag.exe" >> "$GITHUB_OUTPUT"
+            echo "stage=dist/q50diag" >> "$GITHUB_OUTPUT"
+          else
+            echo "exe=dist/Q50 Diag.app/Contents/MacOS/q50diag" >> "$GITHUB_OUTPUT"
+            echo "stage=dist/Q50 Diag.app" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bundled Claude Code CLI runs
+        shell: bash
+        run: |
+          cli=$(find "${{ steps.paths.outputs.stage }}" -path '*claude_agent_sdk/_bundled/*' -name 'claude*' ! -name '.gitignore' -type f | head -n 1)
+          echo "CLI: $cli"
+          "$cli" --version
+
+      # Qt's offscreen plugin on Windows reads fonts from QT_QPA_FONTDIR, not
+      # from the system, so without it every glyph renders as a box.
+      - name: Point offscreen Qt at the Windows fonts
+        if: runner.os == 'Windows'
+        shell: bash
+        run: echo "QT_QPA_FONTDIR=C:/Windows/Fonts" >> "$GITHUB_ENV"
+
+      - name: Smoke test against the simulator (offscreen)
+        shell: bash
+        run: |
+          "${{ steps.paths.outputs.exe }}" --sim --smoke-seconds 20 --screenshot-dir "$RUNNER_TEMP/shots"
+
+      # The platform plugin an end user's computer uses (qwindows or qcocoa).
+      - name: Smoke test on the native window system
+        shell: bash
+        run: |
+          env -u QT_QPA_PLATFORM -u QT_QPA_FONTDIR "${{ steps.paths.outputs.exe }}" --sim --smoke-seconds 15 \
+            --screenshot-dir "$RUNNER_TEMP/shots/native"
+
+      - name: Frozen runtime checks (workspace source, SDK finds and talks to the CLI)
+        shell: bash
+        run: |
+          exe="$PWD/${{ steps.paths.outputs.exe }}"
+          checks="$PWD/packaging/test_frozen_runtime.py"
+          cd "$Q50DIAG_HOME/app"
+          "$exe" --run-pytest -q -p no:cacheprovider "$checks" tests/test_adapters.py
+
+      # MechanIQ runs these shipped tests inside the build before it applies a
+      # change, with sys.frozen set. A failure here means MechanIQ edits on this
+      # OS would be rejected; it is reported without blocking the zip.
+      - name: Shipped test suite inside the build (MechanIQ test gate)
+        continue-on-error: true
+        timeout-minutes: 20
+        shell: bash
+        run: |
+          exe="$PWD/${{ steps.paths.outputs.exe }}"
+          cd "$Q50DIAG_HOME/app"
+          "$exe" --run-pytest -q -p no:cacheprovider
+
+      - name: Upload smoke screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots-${{ matrix.label }}
+          path: ${{ runner.temp }}/shots
+          if-no-files-found: ignore
+
+      - name: Zip (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Rename-Item dist/q50diag "Q50 Diag"
+          Copy-Item packaging/READ-ME-FIRST.txt "dist/Q50 Diag/"
+          7z a -tzip "q50diag-${{ matrix.label }}.zip" "./dist/Q50 Diag"
+
+      # ditto keeps the .app's symlinks and code signature intact; plain zip -r does not.
+      - name: Zip (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p "stage/Q50 Diag"
+          mv "dist/Q50 Diag.app" "stage/Q50 Diag/"
+          cp packaging/READ-ME-FIRST.txt "stage/Q50 Diag/"
+          codesign --verify --deep --strict "stage/Q50 Diag/Q50 Diag.app" \
+            || echo "::warning::codesign --verify reported problems with the ad-hoc signature"
+          ditto -c -k --sequesterRsrc --keepParent "stage/Q50 Diag" "q50diag-${{ matrix.label }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: q50diag-${{ matrix.label }}
+          path: q50diag-${{ matrix.label }}.zip
+          compression-level: 0
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: q50diag-*
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" q50diag-*.zip \
+            --repo "${{ github.repository }}" --title "${{ github.ref_name }}" --notes "Unzip, then follow READ-ME-FIRST.txt inside."

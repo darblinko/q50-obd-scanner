@@ -1,0 +1,8 @@
+# Example DTC descriptions file. Copy it to ~/.q50diag/dtc_descriptions.txt or
+# point Q50DIAG_DTC_DESCRIPTIONS at it, then add your own entries.
+# Format: CODE|description. Sections: [generic], [nissan], [ford].
+[generic]
+P0171|Fuel mixture reads lean on bank 1
+P0300|Random or multiple cylinder misfires
+P0420|Catalytic converter efficiency below threshold on bank 1
+U0100|No messages received from the engine controller

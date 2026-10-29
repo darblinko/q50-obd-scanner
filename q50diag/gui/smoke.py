@@ -1,0 +1,144 @@
+"""Hidden smoke run for `--smoke-seconds N [--screenshot-dir DIR]`.
+
+Drives the main window through a scripted session (full scan, bus monitor,
+live polling, steering watch with markers, explorer scan, console), then
+optionally saves a screenshot of every page and quits. Used to prove the GUI
+works end to end against the simulator; not part of normal operation. For a
+vehicle without a Steering page the steering watch is skipped and the
+explorer scans the engine module with the vehicle's first explorer service."""
+
+from __future__ import annotations
+
+import logging
+import re
+import time
+from pathlib import Path
+from typing import Callable
+
+from PySide6.QtCore import QObject, QTimer
+from PySide6.QtWidgets import QApplication
+
+from q50diag.recorder import list_recordings
+
+log = logging.getLogger(__name__)
+
+LIVE_KEYS = ("adapter.voltage", "obd.01.0C", "obd.01.0D", "bcast.300.assist_raw", "PCM.22.F405")
+
+
+class SmokeRun(QObject):
+    def __init__(self, window, seconds: float, screenshot_dir: Path | None) -> None:
+        super().__init__(window)
+        self.window = window
+        self.ctx = window.ctx
+        self.seconds = max(seconds, 4.0)
+        self.screenshot_dir = screenshot_dir
+        self.started = time.monotonic()
+        self.failures: list[str] = []
+        self.ctx.session.error.connect(lambda text: log.warning("smoke: session error: %s", text))
+        steps: list[tuple[float, Callable[[], None]]] = [
+            (0.10, self._full_scan),
+            (0.30, self._bus_monitor),
+            (0.40, self._live_and_steering),
+            (0.55, self._mark),
+            (0.65, self._explorer_and_console),
+            (0.75, self._mark),
+            (1.00, self._finish),
+        ]
+        for fraction, step in steps:
+            QTimer.singleShot(int(self.seconds * fraction * 1000), self._guard(step))
+
+    def _guard(self, step: Callable[[], None]) -> Callable[[], None]:
+        def run() -> None:
+            log.info("smoke step %s at %.1fs", step.__name__, time.monotonic() - self.started)
+            try:
+                step()
+            except Exception as exc:  # noqa: BLE001; record and keep going to the end
+                log.exception("smoke step %s failed", step.__name__)
+                self.failures.append(f"{step.__name__}: {exc}")
+
+        return run
+
+    def page(self, title: str):
+        return self.window.pages[title]
+
+    def _full_scan(self) -> None:
+        self.window.show_page("Overview")
+        self.ctx.session.full_scan()
+
+    def _bus_monitor(self) -> None:
+        self.ctx.session.cancel()  # cut a long discovery short so the rest can run
+        self.window.show_page("Bus Monitor")
+        self.ctx.session.start_bus_monitor(None)
+
+    def _live_and_steering(self) -> None:
+        self.ctx.session.stop_bus_monitor()
+        live = self.page("Live Data")
+        live.set_checked([key for key in LIVE_KEYS if self.ctx.entry(key)])
+        live.start_polling()
+        if not self.ctx.vehicle.has_steering_page:
+            self.window.show_page("Live Data")
+            return
+        steering = self.page("Steering")
+        steering.start_watch()
+        self.window.show_page("Steering")
+
+    def _mark(self) -> None:
+        self.ctx.mark_event()
+
+    def _explorer_and_console(self) -> None:
+        self.ctx.session.raw_command("ATI")
+        self.ctx.session.raw_command("ATRV")
+        modules = self.page("Modules")
+        vehicle = self.ctx.vehicle
+        target, scan_range = ("EPS", ("00", "3F")) if vehicle.has_steering_page else (vehicle.obd_module, ("F400", "F43F"))
+        if modules.select_module(target):
+            explorer = modules.explorer
+            modules.tabs.setCurrentWidget(explorer)
+            explorer.start_edit.setText(scan_range[0])
+            explorer.end_edit.setText(scan_range[1])
+            explorer.start_scan()
+            QTimer.singleShot(1500, explorer.start_watch)
+
+    def _finish(self) -> None:
+        if self.ctx.recorder.is_recording:
+            self.ctx.stop_recording()
+        recordings = self.page("Recordings")
+        recordings.refresh()
+        saved = list_recordings(recordings.folder)
+        if saved:
+            recordings.open_recording(saved[0])
+        if self.screenshot_dir:
+            self.screenshot_dir.mkdir(parents=True, exist_ok=True)
+            QTimer.singleShot(300, self._screenshots)
+        else:
+            QTimer.singleShot(300, self._quit)
+
+    def _screenshots(self) -> None:
+        titles = list(self.window.pages)
+        self._shoot_next(titles)
+
+    def _shoot_next(self, remaining: list[str]) -> None:
+        if not remaining:
+            self._quit()
+            return
+        title = remaining[0]
+        self.window.show_page(title)
+
+        def grab() -> None:
+            path = self.screenshot_dir / f"{_slug(title)}.png"
+            if not self.window.grab().save(str(path)):
+                self.failures.append(f"could not save {path}")
+            log.info("smoke screenshot %s", path)
+            self._shoot_next(remaining[1:])
+
+        QTimer.singleShot(700, grab)
+
+    def _quit(self) -> None:
+        status = "ok" if not self.failures else "failures: " + "; ".join(self.failures)
+        print(f"smoke run finished after {time.monotonic() - self.started:.1f}s: {status}", flush=True)
+        self.window.close()
+        QApplication.instance().exit(1 if self.failures else 0)
+
+
+def _slug(title: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", title.lower()).strip("_")

@@ -1,0 +1,2 @@
+secret-assignment tests/test_mechaniq_runner.py placeholder ANTHROPIC_API_KEY value sk-inherited in a unit test fixture, not a credential
+secret-assignment tests/test_mechaniq_settings.py placeholder ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN values in a unit test fixture, not credentials

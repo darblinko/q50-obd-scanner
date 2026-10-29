@@ -1,0 +1,32 @@
+[project]
+name = "q50diag"
+version = "0.1.0"
+description = "Diagnostic explorer for a 2017 Infiniti Q50 over a vLinker FS (ELM327-compatible) USB adapter"
+requires-python = ">=3.11"
+dependencies = [
+    "pyserial>=3.5",
+    "PySide6>=6.7",
+    "pyqtgraph>=0.13",
+    "claude-agent-sdk>=0.2.173",
+]
+
+[project.scripts]
+q50diag = "q50diag.__main__:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+# Build-only: packaging/q50diag.spec (`uv sync --group package`).
+package = ["pyinstaller==6.22.3"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.uv]
+python-preference = "only-system"
+# cryptography 49 and later publish no macOS x86_64 wheels; a source build links
+# Homebrew OpenSSL and clashes with the libssl the frozen app bundles.
+constraint-dependencies = ["cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'"]

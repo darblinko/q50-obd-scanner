@@ -1,0 +1,106 @@
+Q50 DIAG: READ ME FIRST
+=======================
+
+You do not need to install anything else. Everything the app needs is in
+the zip file you downloaded.
+
+What you need
+- A Windows 10 or Windows 11 PC (64-bit), or a Mac with macOS 14 (Sonoma)
+  or newer. Older Macs cannot run the app.
+- About 1.5 GB of free disk space.
+- The USB car adapter (vLinker FS or OBDLink EX). Without it you can still
+  try the app with the built-in simulator.
+
+
+WINDOWS
+-------
+1. Right-click the downloaded file "q50diag-windows-x64.zip" and choose
+   "Extract All...", then click "Extract". Do not start the app from inside
+   the zip file.
+2. Open the extracted "Q50 Diag" folder and double-click "q50diag" (its type
+   is "Application").
+3. A blue box saying "Windows protected your PC" may appear. Click
+   "More info", then click "Run anyway". This box appears because the app is
+   not signed with a paid certificate. You only do this once.
+4. If a message says "Smart App Control blocked" the app, there is no button
+   to allow it. Stop and contact the person who sent you the app.
+
+Keep "q50diag" inside the "Q50 Diag" folder, next to the "_internal"
+folder. It does not work on its own. To start it from the desktop, right-click
+"q50diag" and choose "Send to", then "Desktop (create shortcut)". On
+Windows 11, choose "Show more options" first.
+
+The first start takes a few seconds longer than later starts.
+
+
+MAC
+---
+1. Pick the right download. Click the Apple menu, then "About This Mac":
+   - If it says "Chip: Apple M1" (or M2, M3, M4 and so on), use
+     q50diag-macos-arm64.zip
+   - If it says "Processor: Intel", use q50diag-macos-intel.zip
+2. Double-click the zip file. A "Q50 Diag" folder appears. Drag
+   "Q50 Diag" (the app) from that folder into your Applications folder.
+3. Open Applications and double-click "Q50 Diag". The Mac says it cannot
+   verify the app. Click "Done". Do NOT click "Move to Trash".
+4. Open System Settings, then "Privacy & Security". Scroll down to the
+   "Security" section. Next to the line about "Q50 Diag", click
+   "Open Anyway". Type your Mac password, then click "Open Anyway" once more.
+   Do this within an hour of step 3, or repeat step 3 first.
+5. From now on, open the app with a normal double-click.
+
+If the Mac says the app "is damaged and can't be opened", contact the person
+who sent you the app.
+
+
+CONNECTING TO THE CAR
+---------------------
+1. Plug the adapter into the car's diagnostic port (under the dashboard on
+   the driver's side). Plug its USB cable into the computer. Turn the
+   ignition on.
+2. Windows only: the first time, wait about a minute while Windows sets up
+   the adapter by itself. The PC must be connected to the internet.
+3. In the app, open the "Connect" page. The adapter is listed at the top,
+   usually marked "likely vLinker". On Windows its name looks like COM3; on
+   a Mac it looks like /dev/cu.usbserial-something. Select it and click
+   "Connect".
+4. No car nearby? Select "SIMULATOR" in the same list and click "Connect".
+
+
+MECHANIQ, THE AI ASSISTANT (RIGHT-HAND PANEL)
+---------------------------------------------
+MechanIQ answers questions about your car and the app. It needs an Anthropic
+API key. Everything else in the app works without one.
+
+1. Get a key: sign in at platform.claude.com/settings/keys (a paid
+   account) and click "Create Key". Copy the key.
+2. In the app, open MechanIQ settings, paste your API key and save.
+3. Keep the key private, like a password. Anyone who has it can use your
+   paid account.
+
+On a small screen, click ">>" at the top of the MechanIQ panel to fold it
+away and give the page more room. Pages that still do not fit get scroll
+bars.
+
+
+WHERE YOUR FILES ARE
+--------------------
+Recordings (.csv files) and the app log:
+- Windows: open a File Explorer window, click in the address bar, paste
+      %LOCALAPPDATA%\q50diag\app\logs
+  and press Enter.
+- Mac: in Finder, open the "Go" menu, choose "Go to Folder...", paste
+      ~/Library/Application Support/q50diag/app/logs
+  and press Return.
+
+App settings and your MechanIQ API key are kept in a folder named
+".config\q50diag" (Mac: ".config/q50diag") inside your user folder.
+
+
+UPDATING
+--------
+Download the new zip. On Windows, replace the old "Q50 Diag" folder with the
+new one. On a Mac, replace the old "Q50 Diag" app in Applications. Your
+recordings, settings and API key are kept. Changes that MechanIQ made to the
+app itself are not carried over; a copy of them is kept in a folder whose
+name starts with "app-backup", next to the "app" folder named above.
