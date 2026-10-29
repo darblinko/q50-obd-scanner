@@ -25,7 +25,7 @@ def test_q50diag_loads_from_editable_workspace_source():
     source = Path(recorder.__file__)
     assert source.suffix == ".py"
     assert Path(sys._MEIPASS) not in source.parents
-    assert mechaniq_gui.PROJECT_ROOT == source.parent.parent
+    assert source.parent.parent == mechaniq_gui.PROJECT_ROOT
 
 
 def test_sdk_finds_bundled_cli_and_it_runs():

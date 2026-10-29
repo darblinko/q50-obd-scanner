@@ -2,8 +2,14 @@ import pytest
 
 from q50diag.core.transport import NegativeResponse, NoResponse, RequestBlocked, TransportError
 from q50diag.transport.elm_parse import (
-    check_status, console_command, final_response, monitor_filter, parse_can_line,
-    parse_responses, reassemble_frames, response_lines,
+    check_status,
+    console_command,
+    final_response,
+    monitor_filter,
+    parse_can_line,
+    parse_responses,
+    reassemble_frames,
+    response_lines,
 )
 
 

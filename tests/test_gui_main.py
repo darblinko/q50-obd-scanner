@@ -3,11 +3,11 @@ from PySide6.QtCore import QEvent, Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QApplication, QLineEdit, QVBoxLayout, QWidget
 
+from q50diag.core.types import Reading
 from q50diag.gui.main_window import NAVIGATION, PAGE_MIN_WIDTH, MainWindow, PageFrame
 from q50diag.gui.store import SeriesStore
 from q50diag.gui.widgets.charts import StackedCharts
 from q50diag.gui.widgets.top_bar import format_elapsed, voltage_state
-from q50diag.core.types import Reading
 from tests.test_gui_fakes import app, ctx, wait_until  # noqa: F401
 
 
@@ -105,7 +105,7 @@ def test_store_and_chart(app):
     assert not charts.grab().isNull()
 
 
-def test_ctrl_c_closes_the_window(app):  # noqa: F811
+def test_ctrl_c_closes_the_window(app):
     import signal
 
     from PySide6.QtWidgets import QWidget
@@ -137,14 +137,14 @@ def _framed_page(width: int, height: int) -> tuple[PageFrame, QWidget]:
     return frame, page
 
 
-def test_page_frame_fills_a_roomy_frame_without_scrolling(app):  # noqa: F811
+def test_page_frame_fills_a_roomy_frame_without_scrolling(app):
     frame, page = _framed_page(900, 800)
     assert page.size() == frame.viewport().size()
     assert not frame.horizontalScrollBar().isVisible() and not frame.verticalScrollBar().isVisible()
     frame.close()
 
 
-def test_page_frame_scrolls_below_the_minimum_page_size(app):  # noqa: F811
+def test_page_frame_scrolls_below_the_minimum_page_size(app):
     frame, page = _framed_page(500, 400)
     assert page.width() == PAGE_MIN_WIDTH and page.height() >= page.minimumSizeHint().height()
     assert frame.horizontalScrollBar().isVisible() and frame.verticalScrollBar().isVisible()

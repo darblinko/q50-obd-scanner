@@ -8,10 +8,11 @@ from __future__ import annotations
 
 import csv
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, TextIO
+from typing import TextIO
 
 from q50diag.core.types import Reading
 

@@ -9,13 +9,14 @@ this cannot deadlock it; a worker that waits too long gets TimeoutError."""
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from concurrent.futures import Future
 from concurrent.futures import TimeoutError as FutureTimeout
-from typing import Any, Callable
+from typing import Any
 
 from PySide6.QtCore import QCoreApplication, QObject, Qt, QThread, Signal
 
-_invoker: "_Invoker | None" = None
+_invoker: _Invoker | None = None
 _invoker_lock = threading.Lock()
 
 
@@ -62,7 +63,7 @@ def call_in_main_thread(fn: Callable[..., Any], *args: Any, timeout_s: float = 1
             return
         try:
             future.set_result(fn(*args))
-        except BaseException as exc:  # noqa: BLE001; handed back to the waiting thread
+        except BaseException as exc:  # noqa: BLE001 (handed back to the waiting thread)
             future.set_exception(exc)
 
     _get_invoker(main).job.emit(job)

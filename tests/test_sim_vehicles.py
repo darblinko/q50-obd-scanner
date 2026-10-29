@@ -9,6 +9,7 @@ from dataclasses import replace
 
 import pytest
 
+from q50diag.core.transport import NegativeResponse
 from q50diag.gui.app_settings import AppSettings, load_app_settings, save_app_settings
 from q50diag.gui.backend import SIM_REQUEST_LATENCY_S, SIMULATOR, Backend
 from q50diag.protocol import ford
@@ -66,7 +67,7 @@ def test_manual_gt350r_does_not_answer_the_transmission_did():
     backend, transport = open_backend(MUSTANG_GT350R)
     pcm = backend.module_by_name("PCM")
     assert "PCM.22.1E1C" not in [p.key for p in backend.module_parameters(pcm)]
-    with pytest.raises(Exception):
+    with pytest.raises(NegativeResponse):
         ford.request(transport, pcm, b"\x22\x1E\x1C", timeout_s=0.1)
 
 

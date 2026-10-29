@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import threading
 from abc import ABC, abstractmethod
-from typing import Iterator
+from collections.abc import Iterator
 
 from q50diag.core.types import AdapterInfo, CanFrame
 

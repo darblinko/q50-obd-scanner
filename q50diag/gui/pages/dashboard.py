@@ -90,12 +90,12 @@ class DashboardPage(Page):
     def preferences(self) -> Preferences:
         return self._prefs
 
-    def showEvent(self, event: QShowEvent) -> None:  # noqa: N802; Qt override
+    def showEvent(self, event: QShowEvent) -> None:  # noqa: N802 (Qt override)
         super().showEvent(event)
         self.reload_preferences()
         self._resubscribe()
 
-    def hideEvent(self, event: QHideEvent) -> None:  # noqa: N802; Qt override
+    def hideEvent(self, event: QHideEvent) -> None:  # noqa: N802 (Qt override)
         super().hideEvent(event)
         self.animation_timer.stop()
         # Leaving the page pauses its poll so the next page gets the adapter's full
@@ -331,10 +331,10 @@ class DashboardPage(Page):
         for index, slot in enumerate(self.slots()):
             if slot is not None and self.ctx.entry(slot.key) is not None:
                 self._show(index)
-        if self.isVisible() and not self.animation_timer.isActive():
-            if not all(gauge.is_settled() for gauge in self.gauges):
-                self._frame_clock.start()
-                self.animation_timer.start()
+        animating = self.animation_timer.isActive()
+        if self.isVisible() and not animating and not all(gauge.is_settled() for gauge in self.gauges):
+            self._frame_clock.start()
+            self.animation_timer.start()
 
     def _show(self, index: int) -> None:
         key = self.slots()[index].key

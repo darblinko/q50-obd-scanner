@@ -385,7 +385,7 @@ class SteeringPage(Page):
     def _eps_module(self):
         try:
             return self.ctx.backend.module_by_name("EPS")
-        except Exception:  # noqa: BLE001; shown as unavailable on the card
+        except Exception:  # noqa: BLE001 (shown as unavailable on the card)
             return None
 
     def read_eps(self) -> None:

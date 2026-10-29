@@ -19,7 +19,7 @@ import q50diag.protocol
 from q50diag.gui.backend import SIMULATOR
 from q50diag.mechaniq import reload as reload_mod
 from q50diag.mechaniq.reload import RECONNECT_MARKER, HotReloader, ReloadPlan, classify, page_titles
-from tests.test_gui_fakes import ECM, RPM, app, ctx, wait_until  # noqa: F401; fixtures
+from tests.test_gui_fakes import ECM, RPM, app, ctx, wait_until  # noqa: F401 (fixtures)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 

@@ -17,15 +17,16 @@ same port while the recorder keeps writing."""
 from __future__ import annotations
 
 import ast
+import contextlib
 import importlib
 import importlib.util
 import logging
 import sys
 import time
 import traceback
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QWidget
@@ -96,17 +97,17 @@ class _NameImports(ast.NodeVisitor):
         self.known = known
         self.found: set[str] = set()
 
-    def visit_FunctionDef(self, node: ast.AST) -> None:  # noqa: N802; ast visitor
+    def visit_FunctionDef(self, node: ast.AST) -> None:  # noqa: N802 (ast visitor)
         """Imports in function bodies run at call time and see reloaded modules."""
 
     visit_AsyncFunctionDef = visit_FunctionDef  # noqa: N815
 
-    def visit_If(self, node: ast.If) -> None:  # noqa: N802; ast visitor
+    def visit_If(self, node: ast.If) -> None:  # noqa: N802 (ast visitor)
         if _is_type_checking(node.test):
             return
         self.generic_visit(node)
 
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802; ast visitor
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802 (ast visitor)
         base = self._resolve(node)
         if base is None or base not in self.known:
             return
@@ -297,10 +298,9 @@ def _drop_bytecode(module) -> None:
     source = getattr(module, "__file__", None)
     if not source or not source.endswith(".py"):
         return
-    try:
+    # No cache to drop is fine: reload still compiles from source when mtimes differ.
+    with contextlib.suppress(OSError, NotImplementedError, ValueError):
         Path(importlib.util.cache_from_source(source)).unlink(missing_ok=True)
-    except (OSError, NotImplementedError, ValueError):
-        pass  # no cache to drop; reload still compiles from source when mtimes differ
 
 
 def reload_modules(names: Iterable[str]) -> tuple[list[str], str]:
@@ -316,7 +316,7 @@ def reload_modules(names: Iterable[str]) -> tuple[list[str], str]:
         _drop_bytecode(module)
         try:
             importlib.reload(module)
-        except Exception:  # noqa: BLE001; reported to the agent with the traceback
+        except Exception:  # noqa: BLE001 (reported to the agent with the traceback)
             log.exception("reload of %s failed", name)
             return reloaded, f"{name}: {traceback.format_exc(limit=4)}"
         reloaded.append(name)
@@ -403,7 +403,7 @@ class HotReloader:
                 continue
             try:
                 self.window.rebuild_page(title)
-            except Exception as exc:  # noqa: BLE001; the old page stays in place
+            except Exception as exc:  # noqa: BLE001 (the old page stays in place)
                 log.exception("rebuild of page %s failed", title)
                 notes.append(f"page {title} was not rebuilt: {exc}")
                 continue
@@ -463,10 +463,8 @@ class _ReconnectWatch:
             return
         self.active = False
         self.timer.stop()
-        try:
+        with contextlib.suppress(RuntimeError, TypeError):  # already disconnected
             self.ctx.session.connection_changed.disconnect(self._on_connection)
-        except (RuntimeError, TypeError):
-            pass  # already disconnected
 
     def _on_connection(self, connected: bool, _info) -> None:
         if not connected or not self.active:

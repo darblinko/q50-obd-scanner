@@ -20,9 +20,10 @@ import logging
 import threading
 import time
 from collections import deque
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 from claude_agent_sdk import SdkMcpTool, create_sdk_mcp_server, tool
@@ -283,7 +284,7 @@ class Q50Tools:
     def _window(self) -> Any:
         try:
             return self.window_provider()
-        except Exception:  # noqa: BLE001; no window yet is reported as None
+        except Exception:  # noqa: BLE001 (no window yet is reported as None)
             log.exception("window provider failed")
             return None
 
@@ -645,7 +646,7 @@ def _safe(name: str, handler: Callable[[dict[str, Any]], Any]) -> Callable[[dict
             return fail(str(exc))
         except TimeoutError as exc:
             return fail(f"{exc}. The app GUI is busy; wait a moment and retry.")
-        except Exception as exc:  # noqa: BLE001; reported to the agent, logged with traceback
+        except Exception as exc:  # noqa: BLE001 (reported to the agent, logged with traceback)
             log.exception("MechanIQ tool %s failed", name)
             return fail(f"{name} failed: {type(exc).__name__}: {exc}. Check read_app_log for details.")
 

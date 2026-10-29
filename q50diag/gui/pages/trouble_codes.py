@@ -30,7 +30,7 @@ def dtc_description(dtc: Dtc, describe) -> str:
         return dtc.description
     try:
         return describe(dtc.code) or ""
-    except Exception:  # noqa: BLE001; a missing description is not an error worth surfacing
+    except Exception:  # noqa: BLE001 (a missing description is not an error worth surfacing)
         return ""
 
 

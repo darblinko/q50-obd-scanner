@@ -27,7 +27,7 @@ class VerticalStripButton(QPushButton):
         self.setToolTip("Show the MechanIQ panel")
         self.busy = False
 
-    def paintEvent(self, _event: QPaintEvent) -> None:  # noqa: N802; Qt override
+    def paintEvent(self, _event: QPaintEvent) -> None:  # noqa: N802 (Qt override)
         painter = QPainter(self)
         painter.fillRect(self.rect(), QColor(theme.PANEL_HOVER if self.underMouse() else theme.BG_DEEP))
         painter.setPen(QColor(theme.BORDER))

@@ -26,7 +26,7 @@ def pump(seconds: float) -> None:
     wait_until(lambda: False, seconds)
 
 
-def test_hidden_live_charts_skip_timer_redraws(app):  # noqa: F811
+def test_hidden_live_charts_skip_timer_redraws(app):
     store, charts = live_charts(["a", "b"])
     stack = QStackedWidget()
     other_page = QWidget()
@@ -48,7 +48,7 @@ def test_hidden_live_charts_skip_timer_redraws(app):  # noqa: F811
     assert plot.viewRange()[0] != hidden_range
 
 
-def test_scrolling_charts_do_not_repaint_the_y_axis_grid(app, monkeypatch):  # noqa: F811
+def test_scrolling_charts_do_not_repaint_the_y_axis_grid(app, monkeypatch):
     # Translucent grid lines take Qt's slow raster path, so the y axis, whose
     # grid spans the plot, must not be redrawn on every scrolled frame.
     painted_axes = []

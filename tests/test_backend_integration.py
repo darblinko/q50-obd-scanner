@@ -6,8 +6,8 @@ import pytest
 
 from q50diag.core.transport import NegativeResponse, NoResponse, RequestBlocked, TransportError
 from q50diag.core.types import ParameterDef
-from q50diag.protocol import broadcast, discovery, explorer, nissan, obd2
-from q50diag.protocol.modules import KNOWN_MODULES, module_by_name, module_for_response_id
+from q50diag.protocol import broadcast, discovery, explorer, nissan
+from q50diag.protocol.modules import module_by_name, module_for_response_id
 from q50diag.protocol.reader import read_parameter
 from q50diag.transport.elm import ElmTransport
 from q50diag.transport.sim import SimulatedTransport

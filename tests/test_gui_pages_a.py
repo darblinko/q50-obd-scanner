@@ -12,7 +12,7 @@ from q50diag.gui.pages.connect import DEVICE_ROLE, ConnectPage
 from q50diag.gui.pages.console import CommandHistory, ConsolePage
 from q50diag.gui.pages.overview import OverviewPage, voltage_state
 from q50diag.gui.pages.trouble_codes import TroubleCodesPage
-from tests.test_gui_fakes import FakeBackend, app, ctx, wait_until  # noqa: F401; fixtures
+from tests.test_gui_fakes import FakeBackend, app, ctx, wait_until  # noqa: F401 (fixtures)
 
 PAGES = (ConnectPage, OverviewPage, TroubleCodesPage, ConsolePage)
 

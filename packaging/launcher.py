@@ -141,7 +141,7 @@ def import_app(workspace: Path):
     move that copy aside, restore the shipped source and import again."""
     try:
         from q50diag.__main__ import main as app_main
-    except Exception as exc:  # noqa: BLE001; any import failure means a broken edit
+    except Exception as exc:  # noqa: BLE001 (any import failure means a broken edit)
         print(f"q50diag: workspace source failed to import ({exc!r}); restoring the shipped copy", file=sys.stderr)
         for name in [name for name in sys.modules if name == "q50diag" or name.startswith("q50diag.")]:
             del sys.modules[name]

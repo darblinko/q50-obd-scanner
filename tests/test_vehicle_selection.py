@@ -16,11 +16,11 @@ from q50diag.gui.widgets.top_bar import TopBar
 from q50diag.transport.adapters import ADAPTERS
 from q50diag.vehicles.mustang import MUSTANG_GT, MUSTANG_GT350R
 from q50diag.vehicles.q50 import Q50
-from tests.test_gui_fakes import app, ctx, wait_until  # noqa: F401; fixtures
+from tests.test_gui_fakes import app, ctx, wait_until  # noqa: F401 (fixtures)
 
 
 @pytest.fixture
-def idle_ctx(app, tmp_path):  # noqa: F811
+def idle_ctx(app, tmp_path):
     """A disconnected AppContext over the real Backend, saving settings in tmp_path."""
     from q50diag.gui.context import AppContext
     from q50diag.session import Session
@@ -56,7 +56,7 @@ def test_catalog_follows_the_vehicle(idle_ctx):
     assert entries["obd.01.0C"].module.name == "PCM"
 
 
-def test_vehicle_and_adapter_changes_refused_while_connected(ctx):  # noqa: F811
+def test_vehicle_and_adapter_changes_refused_while_connected(ctx):
     assert ctx.session.connected
     assert not ctx.set_vehicle(MUSTANG_GT)
     assert ctx.vehicle is Q50
@@ -73,7 +73,7 @@ def test_set_adapter_saves_and_signals(idle_ctx, tmp_path):
     assert saved == {"vehicle": "q50_2017", "adapter": "obdlink_ex", "bus": "ms"}
 
 
-def test_context_without_settings_path_writes_nothing(ctx, tmp_path):  # noqa: F811
+def test_context_without_settings_path_writes_nothing(ctx, tmp_path):
     ctx.session.disconnect_port()
     assert wait_until(lambda: not ctx.session.connected)
     assert ctx.set_vehicle(MUSTANG_GT)

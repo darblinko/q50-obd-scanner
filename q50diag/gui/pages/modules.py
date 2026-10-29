@@ -367,7 +367,7 @@ class ModulesPage(Page):
             return []
         try:
             return list(self.ctx.backend.module_parameters(self.module))
-        except Exception as exc:  # noqa: BLE001; backend gaps are shown, not fatal
+        except Exception as exc:  # noqa: BLE001 (backend gaps are shown, not fatal)
             self.ctx.notify(f"No parameter list for {self.module.name}: {exc}", "warn")
             return []
 
@@ -469,7 +469,7 @@ class ModulesPage(Page):
         if not connected:
             self._set_live(False)
 
-    def hideEvent(self, event) -> None:  # noqa: N802; Qt override
+    def hideEvent(self, event) -> None:  # noqa: N802 (Qt override)
         self._set_live(False)
         self.explorer.stop_watch()
         super().hideEvent(event)

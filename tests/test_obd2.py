@@ -4,7 +4,7 @@ from q50diag.core.transport import NegativeResponse, TransportError
 from q50diag.protocol import obd2
 from q50diag.protocol.modules import module_by_name
 from q50diag.protocol.reader import read_parameter
-from q50diag.transport.sim import SimulatedTransport, VIN
+from q50diag.transport.sim import VIN, SimulatedTransport
 
 
 @pytest.mark.parametrize("pid, data, expected", [

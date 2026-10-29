@@ -51,10 +51,11 @@ RADIO_STYLE = (
     f" border: 1px solid {theme.BORDER_STRONG}; background: {theme.BG_DEEP}; }}"
     f"QRadioButton::indicator:checked {{ background: {theme.ACCENT}; border-color: {theme.ACCENT}; }}"
 )
+PRESET_ICON_SIZE = QSize(44, 30)
 RANGE_ERROR = "Slot {}: enter both min and max as numbers with max greater than min, or leave both blank."
 
 
-def preset_icon(preset: Preset, size: QSize = QSize(44, 30)) -> QIcon:
+def preset_icon(preset: Preset, size: QSize = PRESET_ICON_SIZE) -> QIcon:
     """A thumbnail of the preset's grid cells."""
     pixmap = QPixmap(size)
     pixmap.fill(Qt.GlobalColor.transparent)

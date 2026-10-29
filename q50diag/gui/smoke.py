@@ -12,8 +12,8 @@ from __future__ import annotations
 import logging
 import re
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 from PySide6.QtCore import QObject, QTimer
 from PySide6.QtWidgets import QApplication
@@ -52,7 +52,7 @@ class SmokeRun(QObject):
             log.info("smoke step %s at %.1fs", step.__name__, time.monotonic() - self.started)
             try:
                 step()
-            except Exception as exc:  # noqa: BLE001; record and keep going to the end
+            except Exception as exc:  # noqa: BLE001 (record and keep going to the end)
                 log.exception("smoke step %s failed", step.__name__)
                 self.failures.append(f"{step.__name__}: {exc}")
 

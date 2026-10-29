@@ -30,3 +30,16 @@ python-preference = "only-system"
 # cryptography 49 and later publish no macOS x86_64 wheels; a source build links
 # Homebrew OpenSSL and clashes with the libssl the frozen app bundles.
 constraint-dependencies = ["cryptography<49; sys_platform == 'darwin' and platform_machine == 'x86_64'"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+# B905: zip() truncation is relied on in places. SIM108: nested ternaries read worse.
+ignore = ["B905", "SIM108"]
+
+[tool.ruff.lint.per-file-ignores]
+# Fixtures imported from tests/test_gui_fakes.py are redefined as test parameters.
+"tests/*" = ["F811"]

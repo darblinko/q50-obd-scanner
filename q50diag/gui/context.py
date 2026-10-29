@@ -90,7 +90,7 @@ class AppContext(QObject):
         extra = [d.address for d in self.discovered]
         try:
             self.catalog = catalog_module.build_catalog(self.backend, pids, extra)
-        except Exception as exc:  # noqa: BLE001; a broken backend must not stop the GUI
+        except Exception as exc:  # noqa: BLE001 (a broken backend must not stop the GUI)
             log.exception("catalog build failed")
             self.notify(f"Parameter catalog unavailable: {exc}", "error")
             self.catalog = []

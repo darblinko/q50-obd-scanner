@@ -200,7 +200,7 @@ class MechaniqRunner(QObject):
             if not finished:
                 self._emit(self._error_event("Claude Code ended the session before the turn finished"))
                 await self._disconnect()
-        except Exception as exc:  # noqa: BLE001; every failure is reported to the UI
+        except Exception as exc:  # noqa: BLE001 (every failure is reported to the UI)
             log.exception("MechanIQ turn failed")
             self._emit(self._error_event(f"{type(exc).__name__}: {exc}"))
             await self._disconnect()
@@ -242,7 +242,7 @@ class MechaniqRunner(QObject):
             return
         try:
             await client.disconnect()
-        except Exception as exc:  # noqa: BLE001; a failed disconnect must not stop the worker
+        except Exception as exc:  # noqa: BLE001 (a failed disconnect must not stop the worker)
             log.warning("MechanIQ disconnect failed: %s", exc)
 
     async def _interrupt(self) -> None:
@@ -250,7 +250,7 @@ class MechaniqRunner(QObject):
             return
         try:
             await self._client.interrupt()
-        except Exception as exc:  # noqa: BLE001; reported to the UI
+        except Exception as exc:  # noqa: BLE001 (reported to the UI)
             self._emit(self._error_event(f"Interrupt failed: {exc}"))
 
     def _error_event(self, text: str) -> AgentEvent:

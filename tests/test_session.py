@@ -3,9 +3,8 @@ import time
 
 import pytest
 
-from q50diag.core.types import ParameterDef
-
 from q50diag.core.transport import TransportError
+from q50diag.core.types import ParameterDef
 from q50diag.gui.backend import SIMULATOR
 from q50diag.session import (
     ADAPTER_MODULE,

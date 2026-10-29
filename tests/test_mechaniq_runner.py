@@ -28,7 +28,7 @@ from q50diag.mechaniq import prompt
 from q50diag.mechaniq.events import TOOL_RESULT_LIMIT, AgentEvent, translate
 from q50diag.mechaniq.runner import MechaniqRunner, build_options
 from q50diag.mechaniq.settings import API_KEY, MechaniqSettings
-from tests.test_gui_fakes import app, wait_until  # noqa: F401; app is a fixture
+from tests.test_gui_fakes import app, wait_until  # noqa: F401 (app is a fixture)
 
 MODEL = "claude-opus-5-5"
 SESSION = "session-1"
@@ -291,7 +291,7 @@ class ClientFactory:
 
 
 @pytest.fixture
-def make_runner(app, tmp_path):  # noqa: F811; app is the imported fixture
+def make_runner(app, tmp_path):  # noqa: F811 (app is the imported fixture)
     runners: list[MechaniqRunner] = []
 
     def build(factory: ClientFactory, settings: MechaniqSettings | None = None):

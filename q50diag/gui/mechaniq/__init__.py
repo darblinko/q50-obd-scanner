@@ -30,7 +30,7 @@ def build_mechaniq(window, ctx) -> MechaniqController:
     controller = MechaniqController(model, ctx=ctx, project_root=PROJECT_ROOT, parent=window)
     try:
         _wire_runtime(controller, window, ctx)
-    except Exception as exc:  # noqa: BLE001; MechanIQ must never stop the diagnostic app
+    except Exception as exc:  # noqa: BLE001 (MechanIQ must never stop the diagnostic app)
         log.exception("MechanIQ runtime unavailable")
         controller.mark_unavailable(f"{type(exc).__name__}: {exc}")
     attach_views(controller, MechaniqPanel(controller), window, ctx)

@@ -13,8 +13,8 @@ import logging
 import queue
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from PySide6.QtCore import QObject, QThread, Signal
 
@@ -199,7 +199,7 @@ class _NotConnected(Exception):
 
 
 class _Worker(QThread):
-    def __init__(self, session: "Session") -> None:
+    def __init__(self, session: Session) -> None:
         super().__init__()
         self._session = session
 
@@ -425,7 +425,7 @@ class Session(QObject):
         except ImportError as exc:
             log.exception("backend module missing")
             self.error.emit(f"{prefix}backend module missing: {exc}")
-        except Exception as exc:  # noqa: BLE001; reported to the user, logged with traceback
+        except Exception as exc:  # noqa: BLE001 (reported to the user, logged with traceback)
             log.exception("%s failed", label or "background task")
             self.error.emit(f"{prefix}failed: {exc}")
 
@@ -445,7 +445,7 @@ class Session(QObject):
             return
         try:
             transport.close()
-        except Exception:  # noqa: BLE001; closing a broken port may fail; nothing to recover
+        except Exception:  # noqa: BLE001 (closing a broken port may fail; nothing to recover)
             log.exception("error closing transport")
         self.adapter = None
         self.port = None

@@ -147,7 +147,7 @@ class ConsolePage(Page):
             return
         self.ctx.session.raw_command(line)
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802; Qt override
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802 (Qt override)
         if watched is self.input and event.type() == QEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Up:
                 previous = self.history.previous()

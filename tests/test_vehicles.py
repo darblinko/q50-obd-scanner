@@ -168,7 +168,7 @@ def test_ford_clear_uses_uds_14_with_allow_clear():
 # --- MechanIQ prompt ------------------------------------------------------
 
 def test_default_system_append_describes_q50_and_vlinker():
-    assert prompt.SYSTEM_APPEND == prompt.build_system_append(Q50, adapter_by_key("vlinker_fs"), "hs")
+    assert prompt.build_system_append(Q50, adapter_by_key("vlinker_fs"), "hs") == prompt.SYSTEM_APPEND
     assert "2017 Infiniti Q50 3.0t" in prompt.SYSTEM_APPEND
     assert "Vgate vLinker FS USB on HS-CAN" in prompt.SYSTEM_APPEND
     assert "EPS module at request 0x742" in prompt.SYSTEM_APPEND

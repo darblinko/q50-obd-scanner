@@ -10,13 +10,13 @@ from PySide6.QtCore import QPointF, Qt
 from PySide6.QtGui import QMouseEvent
 
 from q50diag.gui.widgets.analog_gauge import SETTLE_FRACTION, AnalogGauge, dial_ticks
-from tests.test_gui_fakes import app  # noqa: F401; fixture
+from tests.test_gui_fakes import app  # noqa: F401 (fixture)
 
 FRAME_S = 0.033
 
 
 @pytest.fixture
-def gauge(app):  # noqa: F811
+def gauge(app):
     widget = AnalogGauge()
     widget.resize(220, 200)
     return widget
@@ -224,7 +224,7 @@ def test_dial_ticks_choose_four_to_eight_majors(low, high):
         assert [text for _, text in majors] == ["0", "1", "2", "3", "4", "5", "6", "7"]
 
 
-def test_paint_budget_for_nine_gauges(app):  # noqa: F811
+def test_paint_budget_for_nine_gauges(app):
     gauges = []
     for index in range(9):
         widget = AnalogGauge()

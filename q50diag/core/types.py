@@ -3,8 +3,8 @@ protocol and GUI layers. Change it only with all three in view."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 Value = float | int | str | bool | None
 

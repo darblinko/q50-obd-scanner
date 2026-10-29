@@ -21,7 +21,7 @@ from q50diag.gui import theme
 from q50diag.gui.context import AppContext
 from q50diag.gui.pages.base import Page
 from q50diag.gui.widgets.charts import StackedCharts
-from q50diag.gui.widgets.common import Card, button, hbox, label, make_table, table_item
+from q50diag.gui.widgets.common import Card, button, label, make_table, table_item
 from q50diag.recorder import DEFAULT_LOG_DIR, Recording, list_recordings, load_recording
 
 PATH_ROLE = Qt.ItemDataRole.UserRole + 1

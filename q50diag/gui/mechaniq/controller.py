@@ -200,7 +200,7 @@ class MechaniqController(QObject):
         def work() -> None:
             try:
                 result["entry"] = self._apply_blocking(summary, list(files))
-            except Exception as exc:  # noqa: BLE001; reported to the agent below
+            except Exception as exc:  # noqa: BLE001 (reported to the agent below)
                 result["error"] = exc
             self._posted.emit(loop.quit)
 
@@ -241,7 +241,7 @@ class MechaniqController(QObject):
         def run() -> None:
             try:
                 job()
-            except Exception as exc:  # noqa: BLE001; shown in the transcript
+            except Exception as exc:  # noqa: BLE001 (shown in the transcript)
                 log.exception("MechanIQ background job failed")
                 self._posted.emit(lambda: self.model.add_notice(f"Change failed: {exc}", error=True))
 
@@ -258,7 +258,7 @@ class MechaniqController(QObject):
             return None
         try:
             return {str(path): self._mtime(path) for path in self.change_log.pending_edits()}
-        except Exception:  # noqa: BLE001; a git failure must not block sending
+        except Exception:  # noqa: BLE001 (a git failure must not block sending)
             log.exception("pending_edits failed")
             return None
 

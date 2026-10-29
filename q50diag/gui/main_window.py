@@ -60,11 +60,11 @@ class MarkEventFilter(QObject):
     """Space marks an event unless focus is in a text input, so typing in
     search boxes and the console still works."""
 
-    def __init__(self, window: "MainWindow") -> None:
+    def __init__(self, window: MainWindow) -> None:
         super().__init__(window)
         self._window = window
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802; Qt override
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802 (Qt override)
         if event.type() != QEvent.Type.KeyPress or event.key() != Qt.Key.Key_Space:
             return False
         if not self._window.isActiveWindow() or _typing():
@@ -102,7 +102,7 @@ class PageFrame(QScrollArea):
         self.setWidget(page)
         self._fit()
 
-    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802; Qt override
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802 (Qt override)
         super().resizeEvent(event)
         self._fit()
 
@@ -253,7 +253,7 @@ class MainWindow(QMainWindow):
     def _on_poll_rate(self, rate: float) -> None:
         self.poll_label.setText(f"poll {rate:5.1f} reads/s" if rate > 0 else "")
 
-    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802; Qt override
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 (Qt override)
         QApplication.instance().removeEventFilter(self._space_filter)
         if self.mechaniq is not None:
             self.mechaniq.shutdown()

@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import re
 import shlex
+from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any
 
 WRITE_TOOLS = {"Write": "file_path", "Edit": "file_path", "MultiEdit": "file_path", "NotebookEdit": "notebook_path"}
 READ_TOOLS = {"Read": "file_path", "Grep": "path", "Glob": "path"}

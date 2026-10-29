@@ -19,10 +19,10 @@ import subprocess
 import sys
 import threading
 import uuid
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Sequence
 
 from q50diag.mechaniq.reload import ReloadReport, classify
 
@@ -267,7 +267,7 @@ class ChangeLog:
             return fallback, "No reloader attached: restart the app to load the change.", ""
         try:
             report: ReloadReport = reloader.apply(plan, label)
-        except Exception as exc:  # noqa: BLE001; the commit still records the change
+        except Exception as exc:  # noqa: BLE001 (the commit still records the change)
             log.exception("reload failed")
             return fallback, f"Reload failed: {exc}. Restart the app to load the change.", str(exc)
         return (fallback if report.error else report.kind), report.text(), report.error

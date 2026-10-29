@@ -7,8 +7,9 @@ vehicle profile is resolved at construction."""
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 from dataclasses import replace
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 from q50diag.core.transport import Transport
 from q50diag.core.types import (

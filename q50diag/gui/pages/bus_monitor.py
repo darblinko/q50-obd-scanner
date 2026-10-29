@@ -214,7 +214,7 @@ class BusMonitorPage(Page):
         except ImportError as exc:
             self._decode_failed = True
             self.ctx.notify(f"Bus Monitor: broadcast decoder unavailable ({exc})", "warn")
-        except Exception as exc:  # noqa: BLE001; one bad frame must not stop the capture
+        except Exception as exc:  # noqa: BLE001 (one bad frame must not stop the capture)
             self.ctx.notify(f"Bus Monitor: decode failed for 0x{frame.can_id:03X}: {exc}", "warn")
             self._decode_failed = True
         return {}

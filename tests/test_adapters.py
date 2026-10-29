@@ -3,8 +3,16 @@ import dataclasses
 import pytest
 
 from q50diag.transport.adapters import (
-    ADAPTERS, DEFAULT_ADAPTER_KEY, HS_CAN, MS_CAN, MS_PINS_500, AdapterProfile, BusConfig,
-    adapter_by_key, bus_by_key, guess_adapter,
+    ADAPTERS,
+    DEFAULT_ADAPTER_KEY,
+    HS_CAN,
+    MS_CAN,
+    MS_PINS_500,
+    AdapterProfile,
+    BusConfig,
+    adapter_by_key,
+    bus_by_key,
+    guess_adapter,
 )
 
 

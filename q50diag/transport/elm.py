@@ -12,15 +12,28 @@ from collections.abc import Iterator
 import serial
 
 from q50diag.core.transport import (
-    AdapterReplyError, NoResponse, Transport, TransportError, check_request_allowed,
+    AdapterReplyError,
+    NoResponse,
+    Transport,
+    TransportError,
+    check_request_allowed,
 )
 from q50diag.core.types import AdapterInfo, CanFrame
 from q50diag.transport.adapters import (
-    DEFAULT_ADAPTER_KEY, AdapterProfile, adapter_by_key, bus_by_key, guess_adapter,
+    DEFAULT_ADAPTER_KEY,
+    AdapterProfile,
+    adapter_by_key,
+    bus_by_key,
+    guess_adapter,
 )
 from q50diag.transport.elm_parse import (
-    check_status, console_command, final_response, monitor_filter, parse_can_line,
-    parse_responses, response_lines,
+    check_status,
+    console_command,
+    final_response,
+    monitor_filter,
+    parse_can_line,
+    parse_responses,
+    response_lines,
 )
 
 LOGGER = logging.getLogger("q50diag.elm")

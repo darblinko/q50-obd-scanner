@@ -39,7 +39,7 @@ class Toast(QFrame):
         layout.addLayout(column)
         QTimer.singleShot(DURATION_MS.get(level, 5000), self.dismiss)
 
-    def mousePressEvent(self, event) -> None:  # noqa: N802; Qt override
+    def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt override)
         self.dismiss()
 
     def dismiss(self) -> None:
@@ -82,7 +82,7 @@ class ToastHost(QWidget):
             texts.append(labels[-1].text() if labels else "")
         return texts
 
-    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802; Qt override
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802 (Qt override)
         if watched is self._window and event.type() == QEvent.Type.Resize:
             self._layout()
         return False

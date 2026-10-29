@@ -16,9 +16,9 @@ import json
 import logging
 import os
 import sys
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Mapping
 
 SUBSCRIPTION = "subscription"
 API_KEY = "api_key"

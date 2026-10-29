@@ -58,7 +58,7 @@ class Applier:
 
 
 @pytest.fixture
-def harness(ctx):  # noqa: F811
+def harness(ctx):
     window = FakeWindow(ctx)
     applier = Applier()
     tools = {t.name: t for t in build_tools(ctx, lambda: window, applier.apply, applier.undo)}
@@ -75,7 +75,7 @@ def run_tool(tools, name: str, args: dict | None = None, timeout_s: float = 15.0
     def target() -> None:
         try:
             box["result"] = asyncio.run(tools[name].handler(args or {}))
-        except BaseException as exc:  # noqa: BLE001; re-raised in the test thread
+        except BaseException as exc:  # noqa: BLE001 (re-raised in the test thread)
             box["error"] = exc
 
     worker = threading.Thread(target=target)
@@ -96,7 +96,7 @@ def data_of(result: dict):
 
 
 # Main-thread bridge -----------------------------------------------------------
-def test_call_in_main_thread_runs_on_main_and_reraises(app):  # noqa: F811
+def test_call_in_main_thread_runs_on_main_and_reraises(app):
     box: dict = {}
 
     def worker() -> None:
@@ -114,7 +114,7 @@ def test_call_in_main_thread_runs_on_main_and_reraises(app):  # noqa: F811
     assert call_in_main_thread(lambda x: x + 1, 1) == 2  # direct call on the main thread
 
 
-def test_call_in_main_thread_times_out_and_skips_late_job(app):  # noqa: F811
+def test_call_in_main_thread_times_out_and_skips_late_job(app):
     ran: list[int] = []
     box: dict = {}
 
@@ -133,7 +133,7 @@ def test_call_in_main_thread_times_out_and_skips_late_job(app):  # noqa: F811
 
 
 # Server and schemas -----------------------------------------------------------
-def test_tool_list_and_server(ctx):  # noqa: F811
+def test_tool_list_and_server(ctx):
     assert {name for name, _d, _s in TOOL_SPECS} == TOOL_NAMES
     tools = build_tools(ctx, lambda: None, lambda s, f: "")
     assert {t.name for t in tools} == TOOL_NAMES
@@ -314,7 +314,7 @@ def test_apply_change_delegates_off_main_thread(harness):
     assert applier.calls[-1] == ("undo", "7")
 
 
-def test_undo_without_undoer_and_applier_failure(ctx):  # noqa: F811
+def test_undo_without_undoer_and_applier_failure(ctx):
     def broken(summary, files):
         raise RuntimeError("git missing")
 
@@ -327,7 +327,7 @@ def test_undo_without_undoer_and_applier_failure(ctx):  # noqa: F811
     assert status["current_page"] is None
 
 
-def test_tools_report_not_connected(app, tmp_path):  # noqa: F811
+def test_tools_report_not_connected(app, tmp_path):
     from q50diag.gui.context import AppContext
     from q50diag.session import Session
     from tests.test_gui_fakes import FakeBackend

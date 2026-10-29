@@ -212,7 +212,7 @@ class ConnectPage(Page):
     def refresh_ports(self) -> None:
         try:
             ports = self.ctx.backend.list_ports()
-        except Exception as exc:  # noqa: BLE001; reported to the user
+        except Exception as exc:  # noqa: BLE001 (reported to the user)
             log.exception("port listing failed")
             self.ctx.notify(f"Could not list serial ports: {exc}", "error")
             ports = []

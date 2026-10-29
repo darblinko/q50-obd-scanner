@@ -6,8 +6,16 @@ from __future__ import annotations
 import time
 from datetime import datetime
 
-from PySide6.QtCore import QTimer, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QKeyEvent, QTextBlockFormat, QTextCharFormat, QTextCursor, QTextDocumentFragment
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QKeyEvent,
+    QTextBlockFormat,
+    QTextCharFormat,
+    QTextCursor,
+    QTextDocumentFragment,
+)
 from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -169,7 +177,7 @@ class ChatInput(QPlainTextEdit):
         self.setTabChangesFocus(True)
         self.setFixedHeight(72)
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802; Qt override
+    def keyPressEvent(self, event: QKeyEvent) -> None:  # noqa: N802 (Qt override)
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and not (
             event.modifiers() & Qt.KeyboardModifier.ShiftModifier
         ):

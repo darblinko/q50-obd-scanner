@@ -12,7 +12,7 @@ from q50diag.gui.dashboard_layouts import (
 )
 from q50diag.gui.dialogs.dashboard_settings import DashboardSettingsDialog
 from q50diag.gui.dialogs.sensor_picker import STAR_COLUMN, STAR_OFF, STAR_ON, SensorPickerDialog
-from tests.test_gui_fakes import app, ctx, wait_until  # noqa: F401; fixtures
+from tests.test_gui_fakes import app, ctx, wait_until  # noqa: F401 (fixtures)
 
 
 def slot_keys(layout) -> list:
@@ -25,14 +25,14 @@ def make_prefs(preset: str = "2x3", keys=("obd.01.0C", "obd.01.0D")) -> Preferen
 
 
 # Sensor picker ------------------------------------------------------------
-def test_picker_lists_whole_catalog_and_selects_current(ctx):  # noqa: F811
+def test_picker_lists_whole_catalog_and_selects_current(ctx):
     picker = SensorPickerDialog(ctx.catalog, ("obd.01.0C",), "obd.01.0D")
     assert picker.visible_keys() == [entry.key for entry in ctx.catalog]
     assert picker._row_key(picker.table.currentRow()) == "obd.01.0D"
     assert picker.select_button.isEnabled()
 
 
-def test_picker_search_matches_name_key_and_module(ctx):  # noqa: F811
+def test_picker_search_matches_name_key_and_module(ctx):
     picker = SensorPickerDialog(ctx.catalog, ())
     picker.search_edit.setText("rpm")
     assert picker.visible_keys() == ["obd.01.0C"]
@@ -44,7 +44,7 @@ def test_picker_search_matches_name_key_and_module(ctx):  # noqa: F811
     assert picker.visible_keys() == ["EPS.21.01.torque"]
 
 
-def test_picker_favorites_filter_and_star_toggle(ctx):  # noqa: F811
+def test_picker_favorites_filter_and_star_toggle(ctx):
     picker = SensorPickerDialog(ctx.catalog, ("obd.01.0C", "not.in.catalog"))
     picker.favorites_only.setChecked(True)
     assert picker.visible_keys() == ["obd.01.0C"]
@@ -58,7 +58,7 @@ def test_picker_favorites_filter_and_star_toggle(ctx):  # noqa: F811
     assert picker.visible_keys() == ["obd.01.0D"]
 
 
-def test_picker_select_and_clear(ctx):  # noqa: F811
+def test_picker_select_and_clear(ctx):
     picker = SensorPickerDialog(ctx.catalog, (), "obd.01.0D")
     picker.select_key("obd.01.05")
     assert picker.result() == picker.DialogCode.Accepted
@@ -68,7 +68,7 @@ def test_picker_select_and_clear(ctx):  # noqa: F811
     assert cleared.selected_key() == "" and cleared.result() == cleared.DialogCode.Accepted
 
 
-def test_picker_favorite_button_follows_selection(ctx):  # noqa: F811
+def test_picker_favorite_button_follows_selection(ctx):
     picker = SensorPickerDialog(ctx.catalog, ("obd.01.0C",), "obd.01.0C")
     assert picker.favorite_button.text() == "Remove from favorites"
     picker.favorite_button.click()
@@ -77,7 +77,7 @@ def test_picker_favorite_button_follows_selection(ctx):  # noqa: F811
 
 
 # Settings dialog ----------------------------------------------------------
-def test_settings_preset_change_and_shrink_keeps_hidden(ctx):  # noqa: F811
+def test_settings_preset_change_and_shrink_keeps_hidden(ctx):
     keys = ("obd.01.0C", "obd.01.0D", "obd.01.05", None, "EPS.21.01.supply")
     dialog = DashboardSettingsDialog(make_prefs("2x3", keys), ctx.catalog)
     assert dialog.preset_buttons["2x3"].isChecked()
@@ -91,7 +91,7 @@ def test_settings_preset_change_and_shrink_keeps_hidden(ctx):  # noqa: F811
     assert slot_keys(result)[:5] == list(keys)
 
 
-def test_settings_assign_and_range_override(ctx):  # noqa: F811
+def test_settings_assign_and_range_override(ctx):
     dialog = DashboardSettingsDialog(make_prefs(), ctx.catalog)
     assert dialog.table.item(0, 2).text() == "0 to 7000"
     dialog.table.item(0, 3).setText("0")
@@ -104,7 +104,7 @@ def test_settings_assign_and_range_override(ctx):  # noqa: F811
     assert dialog.apply_button.isEnabled()
 
 
-def test_settings_invalid_range_blocks_apply(ctx):  # noqa: F811
+def test_settings_invalid_range_blocks_apply(ctx):
     dialog = DashboardSettingsDialog(make_prefs(), ctx.catalog)
     dialog.set_range_text(0, "100", "50")
     assert not dialog.apply_button.isEnabled()
@@ -116,7 +116,7 @@ def test_settings_invalid_range_blocks_apply(ctx):  # noqa: F811
     assert active_layout(dialog.result_preferences()).slots[0].range is None
 
 
-def test_settings_named_layouts(ctx):  # noqa: F811
+def test_settings_named_layouts(ctx):
     dialog = DashboardSettingsDialog(make_prefs(), ctx.catalog)
     assert not dialog.delete_button.isEnabled()
     dialog.save_as("Track day")
@@ -137,7 +137,7 @@ def test_settings_named_layouts(ctx):  # noqa: F811
     assert prefs.active == "track-day"
 
 
-def test_settings_marks_unavailable_and_renders(ctx):  # noqa: F811
+def test_settings_marks_unavailable_and_renders(ctx):
     dialog = DashboardSettingsDialog(make_prefs(keys=("not.in.catalog",)), ctx.catalog)
     assert "unavailable" in dialog.table.item(0, 1).text()
     assert dialog.table.item(1, 1).text() == "(empty)"

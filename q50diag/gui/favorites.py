@@ -19,9 +19,9 @@ import logging
 import os
 import shutil
 import tempfile
-from pathlib import Path
+from collections.abc import Callable, Mapping
 from dataclasses import replace
-from typing import Callable, Mapping
+from pathlib import Path
 
 from q50diag.gui.dashboard_layouts import (
     DEFAULT_PRESET,
@@ -34,9 +34,9 @@ from q50diag.gui.dashboard_layouts import (
     valid_range,
     vehicle_layout_id,
     visible_slots,
+    with_favorite,
     with_layout,
     with_vehicle_choice,
-    with_favorite,
     without_favorite,
 )
 

@@ -12,11 +12,11 @@ from q50diag.gui.pages.live_data import KEY_ROLE, LiveDataPage
 from q50diag.gui.pages.recordings import RecordingsPage, count_rows
 from q50diag.gui.widgets.hex_delegate import CHANGED_ROLE
 from q50diag.recorder import Recorder
-from tests.test_gui_fakes import app, ctx, wait_until  # noqa: F401; fixtures
+from tests.test_gui_fakes import app, ctx, wait_until  # noqa: F401 (fixtures)
 
 
 @pytest.mark.parametrize("page_class", [LiveDataPage, BusMonitorPage, RecordingsPage])
-def test_page_constructs_and_renders(ctx, page_class):  # noqa: F811
+def test_page_constructs_and_renders(ctx, page_class):
     page = page_class(ctx)
     page.resize(1280, 800)
     image = page.grab()
@@ -24,7 +24,7 @@ def test_page_constructs_and_renders(ctx, page_class):  # noqa: F811
     assert page.title
 
 
-def test_live_data_polls_checked_parameters(ctx):  # noqa: F811
+def test_live_data_polls_checked_parameters(ctx):
     page = LiveDataPage(ctx)
     keys = ["obd.01.0C", "ABS.22.1208.steering_angle", "bcast.300.assist_raw"]
     page.set_checked(keys)
@@ -40,21 +40,21 @@ def test_live_data_polls_checked_parameters(ctx):  # noqa: F811
     assert "live" not in ctx.session.polling_owners()
 
 
-def test_live_data_search_hides_non_matching(ctx):  # noqa: F811
+def test_live_data_search_hides_non_matching(ctx):
     page = LiveDataPage(ctx)
     page.search.setText("rpm")
     visible = [item.text(0) for item in page._leaves() if not item.isHidden()]
     assert visible == ["Engine RPM"]
 
 
-def test_live_data_keeps_checks_after_catalog_rebuild(ctx):  # noqa: F811
+def test_live_data_keeps_checks_after_catalog_rebuild(ctx):
     page = LiveDataPage(ctx)
     page.set_checked(["obd.01.0D"])
     ctx.rebuild_catalog()
     assert page.checked_keys() == ["obd.01.0D"]
 
 
-def test_live_data_marker_reaches_charts(ctx):  # noqa: F811
+def test_live_data_marker_reaches_charts(ctx):
     page = LiveDataPage(ctx)
     page.set_checked(["obd.01.0C"])
     ctx.mark_event("heavy")
@@ -69,7 +69,7 @@ def test_parse_can_ids():
             parse_can_ids(bad)
 
 
-def test_bus_monitor_aggregates_frames(ctx):  # noqa: F811
+def test_bus_monitor_aggregates_frames(ctx):
     page = BusMonitorPage(ctx)
     now = time.time()
     frames = [
@@ -91,7 +91,7 @@ def test_bus_monitor_aggregates_frames(ctx):  # noqa: F811
     assert page.table.rowCount() == 0
 
 
-def test_bus_monitor_bad_filter_is_reported(ctx):  # noqa: F811
+def test_bus_monitor_bad_filter_is_reported(ctx):
     page = BusMonitorPage(ctx)
     messages = []
     ctx.toast.connect(lambda text, level: messages.append((text, level)))
@@ -102,7 +102,7 @@ def test_bus_monitor_bad_filter_is_reported(ctx):  # noqa: F811
     assert messages and "zz" in messages[-1][0]
 
 
-def test_bus_monitor_live_capture(ctx):  # noqa: F811
+def test_bus_monitor_live_capture(ctx):
     page = BusMonitorPage(ctx)
     page.filter_edit.setText("300")
     page.start_button.setChecked(True)
@@ -126,7 +126,7 @@ def _write_recording(folder):
     return path
 
 
-def test_recordings_lists_and_replays(ctx, tmp_path):  # noqa: F811
+def test_recordings_lists_and_replays(ctx, tmp_path):
     path = _write_recording(tmp_path)
     assert count_rows(path) == 42
     page = RecordingsPage(ctx)
@@ -144,7 +144,7 @@ def test_recordings_lists_and_replays(ctx, tmp_path):  # noqa: F811
     page.grab()
 
 
-def test_recordings_reports_unreadable_file(ctx, tmp_path):  # noqa: F811
+def test_recordings_reports_unreadable_file(ctx, tmp_path):
     messages = []
     ctx.toast.connect(lambda text, level: messages.append(level))
     page = RecordingsPage(ctx)
@@ -152,7 +152,7 @@ def test_recordings_reports_unreadable_file(ctx, tmp_path):  # noqa: F811
     assert messages == ["error"]
 
 
-def test_live_data_add_and_remove_favorite(ctx, tmp_path):  # noqa: F811
+def test_live_data_add_and_remove_favorite(ctx, tmp_path):
     from q50diag.gui.favorites import load_favorites
 
     path = tmp_path / "favorites.json"
@@ -171,7 +171,7 @@ def test_live_data_add_and_remove_favorite(ctx, tmp_path):  # noqa: F811
     assert len(toasts) == 2
 
 
-def test_live_data_favorite_checked_adds_all(ctx, tmp_path):  # noqa: F811
+def test_live_data_favorite_checked_adds_all(ctx, tmp_path):
     from q50diag.gui.favorites import load_favorites
 
     path = tmp_path / "favorites.json"
@@ -184,7 +184,7 @@ def test_live_data_favorite_checked_adds_all(ctx, tmp_path):  # noqa: F811
     assert page.favorite_keys() == saved
 
 
-def test_live_data_reloads_favorites_on_show(ctx, tmp_path):  # noqa: F811
+def test_live_data_reloads_favorites_on_show(ctx, tmp_path):
     from dataclasses import replace
 
     from q50diag.gui.favorites import default_preferences, save_favorites
