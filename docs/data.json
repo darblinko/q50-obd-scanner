@@ -5,10 +5,10 @@
      "source": "q50diag/mechaniq/tools.py, q50diag/core/transport.py, q50diag/protocol/obd2.py, uv run pytest --collect-only -q",
      "alt": "18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 700 tests that need no adapter or API key.",
      "tiles": [
-       {"label": "MCP tools exposed to the agent", "value": "18", "note": "TOOL_SPECS in q50diag/mechaniq/tools.py"},
-       {"label": "Service IDs on the request allowlist", "value": "16", "note": "q50diag/core/transport.py; clear codes 04 and 14 need confirmation"},
-       {"label": "OBD-II mode 01 definitions", "value": "218", "note": "MODE01_PIDS in q50diag/protocol/obd2.py"},
-       {"label": "Tests, no adapter or API key", "value": "700", "note": "uv run pytest --collect-only -q"}
+       {"label": "MCP tools for the agent", "value": "18", "note": "TOOL_SPECS, tools.py"},
+       {"label": "Allowed service IDs", "value": "16", "note": "core/transport.py"},
+       {"label": "OBD-II mode 01 PIDs", "value": "218", "note": "MODE01_PIDS, obd2.py"},
+       {"label": "Tests, no hardware", "value": "700", "note": "pytest --collect-only"}
      ]},
     {"name": "guard-cases", "type": "hbar", "title": "Guard hook test cases per rule",
      "subtitle": "tests/test_mechaniq_guard.py, all passing at 4f6100b",
@@ -26,7 +26,7 @@
        {"label": "allow: project file tools", "value": 9, "status": "pass"}
      ]},
     {"name": "gate-cases", "type": "hbar", "title": "Blocked vehicle requests tested per entry point",
-     "subtitle": "ECU reset, security access, write, routine, I/O control, download, programming session, unconfirmed clear, empty request",
+     "subtitle": "Transport bars: the 10 payloads in BLOCKED, tests/test_backend_integration.py",
      "source": "uv run pytest --collect-only -q tests/test_backend_integration.py tests/test_mechaniq_tools.py tests/test_elm.py",
      "alt": "10 blocked payloads are tested against the simulator transport and 10 against the ELM transport; 5 against the MechanIQ raw_read tool; 2 OBD mode 08 payloads against the ELM transport.",
      "data": [
@@ -39,10 +39,10 @@
      "source": "docs/q50-findings-2026-10-17.md",
      "alt": "13 modules answered a 65 second discovery sweep, 2 modules stored 3 confirmed codes, an unfiltered 5 second bus monitor received 0 broadcast frames, and the decoded EPS angle correlated at -1.00 with the ABS steering angle.",
      "tiles": [
-       {"label": "Modules that answered the sweep", "value": "13", "note": "65 s discovery sweep"},
-       {"label": "Stored confirmed codes", "value": "3", "note": "RADAR 2, AIR BAG 1; EPS none"},
-       {"label": "Broadcast frames at the OBD port", "value": "0", "note": "5 s unfiltered monitor; port is gatewayed"},
-       {"label": "EPS angle vs ABS angle correlation", "value": "-1.00", "note": "EPS 21 01 bytes 3-4, 97 + 215 samples"}
+       {"label": "Modules answered", "value": "13", "note": "65 s discovery sweep"},
+       {"label": "Stored codes", "value": "3", "note": "RADAR 2, AIR BAG 1"},
+       {"label": "Broadcast frames", "value": "0", "note": "5 s unfiltered monitor"},
+       {"label": "EPS vs ABS angle", "value": "-1.00", "note": "r over 97 + 215 samples"}
      ]}
   ]
 }
