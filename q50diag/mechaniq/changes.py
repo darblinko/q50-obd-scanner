@@ -5,7 +5,7 @@ commits only the listed files as `fix(mechaniq): <summary>` and appends one
 JSON line to `logs/mechaniq-changes.jsonl`. Failing tests stop it before the
 reload and the commit. `undo()` reverts the commit for those files and reloads them.
 
-The calls block on subprocesses (pytest up to 180 s), so call them from a
+The calls block on subprocesses (pytest up to TEST_TIMEOUT_S, 300 s), so call them from a
 worker thread; the reloader moves its own work to the Qt main thread."""
 
 from __future__ import annotations
