@@ -243,7 +243,8 @@ class MechaniqController(QObject):
                 job()
             except Exception as exc:  # noqa: BLE001 (shown in the transcript)
                 log.exception("MechanIQ background job failed")
-                self._posted.emit(lambda: self.model.add_notice(f"Change failed: {exc}", error=True))
+                notice = f"Change failed: {exc}"
+                self._posted.emit(lambda: self.model.add_notice(notice, error=True))
 
         threading.Thread(target=run, name="mechaniq-change", daemon=True).start()
 

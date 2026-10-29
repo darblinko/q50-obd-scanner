@@ -301,6 +301,16 @@ def test_undo_change_tool_runs_on_worker_thread(app):
     assert wait_until(lambda: controller.model.changes()[0].id == "uc1", 2)
 
 
+def test_failed_background_job_reports_its_error(app):
+    controller, _runner = make_controller()
+
+    def fail() -> None:
+        raise RuntimeError("disk full")
+
+    controller._in_background(fail)
+    assert wait_until(lambda: any(e.text == "Change failed: disk full" for e in controller.model.transcript()), 5)
+
+
 def test_agent_finished_twice_is_idempotent(app):
     model = MechaniqModel()
     model.handle_event(Event("agent_started", "t1", data={"title": "Helper", "subagent_type": "data-analyst"}))
