@@ -33,7 +33,7 @@ from q50diag.transport.elm_parse import (
     final_response,
     monitor_filter,
     parse_can_line,
-    parse_responses,
+    parse_responses_by_ecu,
     response_lines,
 )
 
@@ -326,8 +326,9 @@ class ElmTransport(Transport):
         text = self._exchange(command, timeout_s + 0.15)
         answers: dict[int, bytes] = {}
         pending: set[int] = set()
-        failures: dict[int, Exception] = {}
-        for can_id, messages in parse_responses(text, command, can_ids).items():
+        streams, reassembly_failures = parse_responses_by_ecu(text, command, can_ids)
+        failures: dict[int, Exception] = dict(reassembly_failures)
+        for can_id, messages in streams.items():
             try:
                 answer = final_response(messages, payload[0])
             except (NegativeResponse, NoResponse) as error:
@@ -378,6 +379,11 @@ class ElmTransport(Transport):
             return answers[rx_id]
 
     def request_functional(self, payload: bytes, timeout_s: float = 1.0) -> dict[int, bytes]:
+        return self.request_functional_with_failures(payload, timeout_s)[0]
+
+    def request_functional_with_failures(
+        self, payload: bytes, timeout_s: float = 1.0
+    ) -> tuple[dict[int, bytes], dict[int, Exception]]:
         check_request_allowed(payload)
         with self._lock:
             self._prepare()
@@ -385,12 +391,13 @@ class ElmTransport(Transport):
             self._set_timeout(timeout_s)
             answers, failures = self._responses(payload, timeout_s, set(range(0x7E8, 0x7F0)))
             result = {can_id: data for can_id, data in answers.items() if 0x7E8 <= can_id <= 0x7EF}
-            for can_id, error in sorted(failures.items()):
+            failures = {can_id: failures[can_id] for can_id in sorted(failures) if can_id not in result}
+            for can_id, error in failures.items():
                 LOGGER.debug("Functional request %s: 0x%03X failed: %s", payload.hex(), can_id, error)
             if not result:
-                rejection = next((error for _, error in sorted(failures.items())), None)
+                rejection = next(iter(failures.values()), None)
                 raise rejection or NoResponse("No OBD-II modules answered")
-            return result
+            return result, failures
 
     def raw_command(self, line: str) -> str:
         command, payload = console_command(line)

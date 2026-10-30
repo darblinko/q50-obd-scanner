@@ -135,11 +135,16 @@ class LoggingTransport(Transport):
         return response
 
     def request_functional(self, payload, timeout_s=1.0) -> dict[int, bytes]:
+        return self.request_functional_with_failures(payload, timeout_s)[0]
+
+    def request_functional_with_failures(self, payload, timeout_s=1.0) -> tuple[dict[int, bytes], dict[int, Exception]]:
         self._log("TX", f"7DF  {payload.hex(' ').upper()}")
-        responses = self.inner.request_functional(payload, timeout_s)
+        responses, failures = self.inner.request_functional_with_failures(payload, timeout_s)
         for can_id, data in responses.items():
             self._log("RX", f"{can_id:03X}  {data.hex(' ').upper()}")
-        return responses
+        for can_id, error in failures.items():
+            self._log("RX", f"{can_id:03X}  {error}")
+        return responses, failures
 
     def raw_command(self, line: str) -> str:
         return self.inner.raw_command(line)

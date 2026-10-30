@@ -493,3 +493,25 @@ def test_functional_raises_negative_response_when_every_ecu_rejects(elm):
     fake.replies["0A"] = "7E8 03 7F 0A 12\r7E9 03 7F 0A 11"
     with pytest.raises(NegativeResponse):
         transport.request_functional(b"\x0a")
+
+
+def test_functional_incomplete_transfer_keeps_complete_ecu_answer(elm):
+    transport, fake = elm
+    fake.replies["03"] = "7E8 04 43 01 01 71\r7E9 10 0E 43 06 01 01 02 02"
+    answers, failures = transport.request_functional_with_failures(b"\x03")
+    assert answers == {0x7E8: bytes.fromhex("43 01 01 71")}
+    assert list(failures) == [0x7E9] and isinstance(failures[0x7E9], NoResponse)
+
+
+def test_functional_reports_rejecting_ecu_alongside_answers(elm):
+    transport, fake = elm
+    fake.replies["03"] = "7E8 02 43 00\r7E9 03 7F 03 22"
+    answers, failures = transport.request_functional_with_failures(b"\x03")
+    assert answers == {0x7E8: bytes.fromhex("43 00")}
+    assert isinstance(failures[0x7E9], NegativeResponse) and failures[0x7E9].code == 0x22
+
+
+def test_physical_request_to_complete_ecu_ignores_other_incomplete_stream(elm):
+    transport, fake = elm
+    fake.replies["2183"] = "762 03 61 83 01\r763 10 0E 61 83 01 02 03 04"
+    assert transport.request(0x742, 0x762, b"\x21\x83") == bytes.fromhex("61 83 01")

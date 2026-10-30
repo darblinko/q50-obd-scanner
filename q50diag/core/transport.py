@@ -105,6 +105,14 @@ class Transport(ABC):
         """Broadcast on 0x7DF and return {response CAN id: payload} for every
         OBD-II module that answered."""
 
+    def request_functional_with_failures(
+        self, payload: bytes, timeout_s: float = 1.0
+    ) -> tuple[dict[int, bytes], dict[int, Exception]]:
+        """request_functional plus {response CAN id: error} for every module
+        that answered with a negative or unusable reply while another module
+        answered positively. Transports that cannot tell return no failures."""
+        return self.request_functional(payload, timeout_s), {}
+
     @abstractmethod
     def raw_command(self, line: str) -> str:
         """Raw console. AT/ST/VT lines pass to the adapter, except commands

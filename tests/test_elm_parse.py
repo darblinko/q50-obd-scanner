@@ -8,7 +8,9 @@ from q50diag.transport.elm_parse import (
     monitor_filter,
     parse_can_line,
     parse_responses,
+    parse_responses_by_ecu,
     reassemble_frames,
+    reassemble_frames_by_ecu,
     response_lines,
 )
 
@@ -174,3 +176,17 @@ def test_orphan_consecutive_frames_from_interrupted_transfer_are_ignored():
 def test_malformed_iso_tp_is_no_response_not_link_loss():
     with pytest.raises(NoResponse):
         parse_responses("763 10 20 61 01 00 00 00 00\r763 23 00 00 00 00 00 00 00")
+
+
+def test_incomplete_transfer_keeps_other_ecus_complete_responses():
+    text = "7E8 06 43 01 01 71 00 00\r7E9 10 0E 43 06 01 01 02 02"
+    streams, failures = parse_responses_by_ecu(text)
+    assert streams == {0x7E8: [bytes.fromhex("43 01 01 71 00 00")]}
+    assert list(failures) == [0x7E9] and "Incomplete" in str(failures[0x7E9])
+
+
+def test_malformed_stream_fails_only_its_ecu():
+    frames = [(0x7E8, b"\x10\x0aabcdef"), (0x7E9, b"\x03\x43\x00\x00"), (0x7E8, b"\x22xyz")]
+    streams, failures = reassemble_frames_by_ecu(frames)
+    assert streams == {0x7E9: [b"\x43\x00\x00"]}
+    assert "sequence" in str(failures[0x7E8])
