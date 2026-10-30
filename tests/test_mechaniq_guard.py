@@ -296,3 +296,73 @@ def test_denies_reading_credentials_from_environment(command):
 )
 def test_allows_environment_use_without_listing(command):
     assert decide("Bash", {"command": command}) == {}
+
+
+@pytest.mark.parametrize("command", ["printenv -0", "printenv --null", "printenv -- ", "env printenv -0"])
+def test_denies_printenv_with_only_options(command):
+    assert "credentials" in denied(decide("Bash", {"command": command}))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'echo hi > "$HOME/guard-test"',
+        "echo hi > $TMPDIR/out",
+        "echo hi >> ${HOME}/out",
+        "echo hi > `mktemp`",
+        "cp README.md $HOME/copy",
+        "ls | tee $HOME/listing",
+        "touch logs/$NAME",
+    ],
+)
+def test_denies_write_targets_with_shell_expansion(command):
+    assert "shell expansion" in denied(decide("Bash", {"command": command}))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "command tee /tmp/guard-test",
+        "echo x | command tee /tmp/guard-test",
+        "echo x | sudo tee -a /etc/hosts",
+        "echo x | /usr/bin/tee /tmp/out",
+        "echo x | env tee /tmp/out",
+    ],
+)
+def test_denies_tee_behind_wrappers(command):
+    assert "outside" in denied(decide("Bash", {"command": command}))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "env -C /tmp touch guard-test",
+        "env --chdir /tmp touch guard-test",
+        "env --chdir=/tmp touch guard-test",
+        "env -C.. touch guard-test",
+        "sudo -D /tmp touch guard-test",
+        "sudo --chdir=/tmp rm -f x",
+        "env -C .. cp README.md copy",
+        "echo x | env -C /tmp tee out",
+    ],
+)
+def test_denies_relative_writes_after_wrapper_chdir(command):
+    assert "outside" in denied(decide("Bash", {"command": command}))
+
+
+def test_denies_relative_write_after_unresolvable_wrapper_chdir():
+    assert "chdir" in denied(decide("Bash", {"command": "env -C $DIR touch out"}))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "env -C logs touch marker",
+        "env -C /tmp touch /home/user/projects/obd-scanner/logs/marker",
+        "env -C /tmp echo x > logs/out.txt",
+        "echo x | command tee logs/out.txt",
+        "printenv HOME PATH",
+    ],
+)
+def test_allows_wrapper_forms_inside_project(command):
+    assert decide("Bash", {"command": command}) == {}

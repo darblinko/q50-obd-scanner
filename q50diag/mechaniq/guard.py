@@ -12,10 +12,12 @@ a commit message is not mistaken for a command. Leading VAR=value assignments
 and wrappers such as env, nohup and timeout are skipped to find the command a
 segment runs. Redirect and tee targets, file operands of cp, mv, rm and
 similar commands, and dd of= are checked like file writes, relative to the
-directory the preceding `cd` segments select. The Bash checks are a guard
-against mistakes, not a sandbox: a script file can still do anything its
-interpreter allows, and the credentials stay in the environment of every
-command the agent runs."""
+directory the preceding `cd` segments select and, for the command itself, the
+directory env -C or sudo -D selects. A write target that contains `$` or a
+backtick is denied because its expansion cannot be checked. The Bash checks
+are a heuristic filter against mistakes and provide no OS sandbox: a script file can
+still do anything its interpreter allows, and the credentials stay in the
+environment of every command the agent runs."""
 
 from __future__ import annotations
 
@@ -55,6 +57,9 @@ WRAPPERS = {
     "stdbuf": {"-i", "-o", "-e"},
     "xargs": {"-I", "-i", "-n", "-L", "-l", "-P", "-d", "-s", "-E", "-e", "-a"},
 }
+# Short options of wrappers that run the command in another working directory
+# (both also accept --chdir).
+CHDIR_OPTIONS = {"env": "-C", "sudo": "-D"}
 # File commands whose last operand (or -t directory) is the destination.
 DESTINATION_COMMANDS = {"cp", "mv", "install", "ln", "rsync"}
 # File commands that modify every operand.
@@ -168,11 +173,30 @@ def without_redirects(segment: list[str]) -> list[str]:
     return kept
 
 
-def unwrap(segment: list[str]) -> list[str]:
+def chdir_option(wrapper: str, args: list[str], index: int) -> tuple[str | None, int]:
+    """(directory, tokens consumed) when args[index] is the working-directory
+    option of `wrapper` (env -C, sudo -D, --chdir), else (None, 0)."""
+    short = CHDIR_OPTIONS.get(wrapper)
+    if short is None:
+        return None, 0
+    option = args[index]
+    if option in (short, "--chdir"):
+        return (args[index + 1], 2) if index + 1 < len(args) else ("", 1)
+    if option.startswith("--chdir="):
+        return option.removeprefix("--chdir="), 1
+    if option.startswith(short):
+        return option.removeprefix(short), 1
+    return None, 0
+
+
+def unwrap_with_directories(segment: list[str]) -> tuple[list[str], list[str]]:
     """The command a segment runs, after leading VAR=value assignments and
-    wrapper commands such as env, nohup or timeout. Empty when only
-    assignments and wrappers are present (a bare `env` lists the environment)."""
+    wrapper commands such as env, nohup or timeout, plus the working
+    directories those wrappers select for it, in order. The command is empty
+    when only assignments and wrappers are present (a bare `env` lists the
+    environment)."""
     index = 0
+    directories: list[str] = []
     while index < len(segment):
         token = segment[index]
         if ASSIGNMENT.match(token):
@@ -183,10 +207,20 @@ def unwrap(segment: list[str]) -> list[str]:
             break
         index += 1
         while index < len(segment) and segment[index].startswith("-") and segment[index] != "-":
-            index += 2 if segment[index] in WRAPPERS[name] else 1
+            directory, consumed = chdir_option(name, segment, index)
+            if directory is not None:
+                directories.append(directory)
+                index += consumed
+            else:
+                index += 2 if segment[index] in WRAPPERS[name] else 1
         if name == "timeout":
             index += 1  # the duration
-    return segment[index:]
+    return segment[index:], directories
+
+
+def unwrap(segment: list[str]) -> list[str]:
+    """The command a segment runs; see unwrap_with_directories."""
+    return unwrap_with_directories(segment)[0]
 
 
 def file_command_targets(command: list[str]) -> list[str]:
@@ -229,7 +263,8 @@ def lists_environment(segment: list[str], command: list[str]) -> bool:
     name = Path(command[0]).name
     args = command[1:]
     if name == "printenv":
-        return not args
+        # Options such as -0 or --null still print every variable.
+        return all(arg.startswith("-") for arg in args)
     if name == "set":
         return not args
     return name in ENV_LISTING_BUILTINS and all(arg.startswith("-") for arg in args)
@@ -247,16 +282,35 @@ def git_subcommand(segment: list[str]) -> tuple[str, list[str]] | None:
     return segment[index], segment[index + 1 :]
 
 
-def write_targets(segment: list[str]) -> list[str]:
-    """Files a segment writes through redirects or tee."""
+def redirect_targets(segment: list[str]) -> list[str]:
+    """Files a segment writes through output redirects."""
     targets: list[str] = []
     for index, token in enumerate(segment[:-1]):
         following = segment[index + 1]
         if token in WRITE_REDIRECTS and not (token == ">&" and following.isdigit()):
             targets.append(following)
-    if segment[0] == "tee":
-        targets += [token for token in segment[1:] if not token.startswith("-")]
     return targets
+
+
+def tee_targets(command: list[str]) -> list[str]:
+    """Files an unwrapped tee command writes."""
+    if not command or Path(command[0]).name != "tee":
+        return []
+    return [token for token in command[1:] if not token.startswith("-")]
+
+
+def is_dynamic(path: str) -> bool:
+    """True when the shell expands the path at run time ($VAR, $(...), backticks)."""
+    return "$" in path or "`" in path
+
+
+def change_directory(target: str, cwd: Path | None) -> Path | None:
+    """`cwd` after changing to `target`; None when it cannot be known statically."""
+    if not target or target == "-" or is_dynamic(target):
+        return None
+    if cwd is None and not Path(target).expanduser().is_absolute():
+        return None
+    return resolve(target, cwd or Path.home())
 
 
 def next_directory(command: list[str], cwd: Path | None) -> Path | None:
@@ -264,12 +318,7 @@ def next_directory(command: list[str], cwd: Path | None) -> Path | None:
     args = [arg for arg in command[1:] if not (arg.startswith("-") and arg != "-")]
     if not args:
         return Path.home()
-    target = args[0]
-    if target == "-" or "$" in target or "`" in target:
-        return None
-    if cwd is None and not Path(target).expanduser().is_absolute():
-        return None
-    return resolve(target, cwd or Path.home())
+    return change_directory(args[0], cwd)
 
 
 class Guard:
@@ -343,16 +392,23 @@ class Guard:
             return self._check_raw_bash(command)
         current: Path | None = cwd
         for segment in segments:
-            program = unwrap(without_redirects(segment))
+            program, directories = unwrap_with_directories(without_redirects(segment))
             if program and program[0] in ("cd", "pushd"):
                 current = next_directory(program, current)
                 continue
-            message = self._check_segment(segment, program, current)
+            program_cwd = current
+            for directory in directories:
+                program_cwd = change_directory(directory, program_cwd)
+            message = self._check_segment(segment, program, current, program_cwd)
             if message:
                 return message
         return None
 
-    def _check_segment(self, segment: list[str], program: list[str], cwd: Path | None) -> str | None:
+    def _check_segment(
+        self, segment: list[str], program: list[str], cwd: Path | None, program_cwd: Path | None
+    ) -> str | None:
+        """`cwd` is the shell's directory (redirects); `program_cwd` is the
+        directory the command runs in after env -C or sudo -D."""
         if lists_environment(segment, program):
             return ENV_SECRET_MESSAGE
         text = " ".join(segment)
@@ -365,19 +421,29 @@ class Guard:
                 return DISCARD_MESSAGE
         elif any(pattern.search(text) for pattern in SERIAL_PATTERNS):
             return SERIAL_MESSAGE
-        targets = write_targets(segment) + (file_command_targets(program) if program else [])
-        for target in targets:
-            if target in HARMLESS_TARGETS or target.startswith("$"):
-                continue
-            if cwd is None and not Path(target).expanduser().is_absolute():
-                return (
-                    f"The guard cannot tell which directory the earlier cd selected, so the relative path "
-                    f"{target} cannot be checked. Use a literal cd target or an absolute path under {self.root}."
-                )
-            message = self._check_write(target, cwd or self.root)
+        program_targets = tee_targets(program) + (file_command_targets(program) if program else [])
+        checks = [(target, cwd) for target in redirect_targets(segment)]
+        checks += [(target, program_cwd) for target in program_targets]
+        for target, directory in checks:
+            message = self._check_write_target(target, directory)
             if message:
                 return message
         return None
+
+    def _check_write_target(self, target: str, cwd: Path | None) -> str | None:
+        if target in HARMLESS_TARGETS:
+            return None
+        if is_dynamic(target):
+            return (
+                f"The write target {target} depends on a shell expansion the guard cannot check. "
+                f"Write to a literal path under {self.root}."
+            )
+        if cwd is None and not Path(target).expanduser().is_absolute():
+            return (
+                f"The guard cannot tell which directory the earlier cd or chdir option selected, so the relative "
+                f"path {target} cannot be checked. Use a literal directory or an absolute path under {self.root}."
+            )
+        return self._check_write(target, cwd or self.root)
 
     def _check_raw_bash(self, command: str) -> str | None:
         if RAW_GIT_PUSH.search(command):
