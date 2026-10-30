@@ -480,3 +480,16 @@ def test_console_blocks_nvm_reset(elm):
     for line in ("STRSTNVM", "STP53", "stsbr 9600"):
         with pytest.raises(RequestBlocked):
             transport.raw_command(line)
+
+
+def test_functional_negative_response_keeps_other_ecu_answers(elm):
+    transport, fake = elm
+    fake.replies["03"] = "7E8 04 43 01 01 71\r7E9 03 7F 03 11"
+    assert transport.request_functional(b"\x03") == {0x7E8: bytes.fromhex("43 01 01 71")}
+
+
+def test_functional_raises_negative_response_when_every_ecu_rejects(elm):
+    transport, fake = elm
+    fake.replies["0A"] = "7E8 03 7F 0A 12\r7E9 03 7F 0A 11"
+    with pytest.raises(NegativeResponse):
+        transport.request_functional(b"\x0a")

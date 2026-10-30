@@ -13,6 +13,7 @@ import serial
 
 from q50diag.core.transport import (
     AdapterReplyError,
+    NegativeResponse,
     NoResponse,
     Transport,
     TransportError,
@@ -315,23 +316,35 @@ class ElmTransport(Transport):
             self._command(f"ATST{units:02X}")
             self._timeout_units = units
 
-    def _collect(self, payload: bytes, timeout_s: float, can_ids: set[int]) -> tuple[dict[int, bytes], set[int]]:
+    def _collect(
+        self, payload: bytes, timeout_s: float, can_ids: set[int]
+    ) -> tuple[dict[int, bytes], set[int], dict[int, Exception]]:
+        """Positive answers, ECUs still pending (7F xx 78) and per-ECU
+        failures. One ECU's negative or truncated reply does not discard
+        the answers of the others."""
         command = payload.hex().upper()
         text = self._exchange(command, timeout_s + 0.15)
         answers: dict[int, bytes] = {}
         pending: set[int] = set()
+        failures: dict[int, Exception] = {}
         for can_id, messages in parse_responses(text, command, can_ids).items():
-            answer = final_response(messages, payload[0])
+            try:
+                answer = final_response(messages, payload[0])
+            except (NegativeResponse, NoResponse) as error:
+                failures[can_id] = error
+                continue
             if answer is not None:
                 answers[can_id] = answer
             elif any(message[:3] == bytes((0x7F, payload[0], 0x78)) for message in messages):
                 pending.add(can_id)
-        return answers, pending
+        return answers, pending, failures
 
-    def _responses(self, payload: bytes, timeout_s: float, can_ids: set[int]) -> dict[int, bytes]:
-        answers, pending = self._collect(payload, timeout_s, can_ids)
+    def _responses(
+        self, payload: bytes, timeout_s: float, can_ids: set[int]
+    ) -> tuple[dict[int, bytes], dict[int, Exception]]:
+        answers, pending, failures = self._collect(payload, timeout_s, can_ids)
         if not pending:
-            return answers
+            return answers, failures
         # The ELM printed its prompt after 7F xx 78, so it is no longer
         # listening. Repeat the request once with the longest ELM timeout.
         LOGGER.info(
@@ -342,12 +355,12 @@ class ElmTransport(Transport):
         self._command("ATSTFF")
         self._timeout_units = 0xFF
         try:
-            retry_answers, pending = self._collect(payload, 1.02, pending)
+            retry_answers, pending, retry_failures = self._collect(payload, 1.02, pending)
         finally:
             self._command("ATAT1")
         if pending:
             LOGGER.info("Response pending did not complete for %s", sorted(pending))
-        return {**answers, **retry_answers}
+        return {**answers, **retry_answers}, {**failures, **retry_failures}
 
     def request(
         self, tx_id: int, rx_id: int, payload: bytes, timeout_s: float = 1.0, allow_clear: bool = False
@@ -357,7 +370,9 @@ class ElmTransport(Transport):
             self._prepare()
             self._set_address(tx_id, rx_id)
             self._set_timeout(timeout_s)
-            answers = self._responses(payload, timeout_s, {rx_id})
+            answers, failures = self._responses(payload, timeout_s, {rx_id})
+            if rx_id in failures:
+                raise failures[rx_id]
             if rx_id not in answers:
                 raise NoResponse(f"No response from 0x{rx_id:03X}")
             return answers[rx_id]
@@ -368,10 +383,13 @@ class ElmTransport(Transport):
             self._prepare()
             self._set_address(0x7DF, None)
             self._set_timeout(timeout_s)
-            answers = self._responses(payload, timeout_s, set(range(0x7E8, 0x7F0)))
+            answers, failures = self._responses(payload, timeout_s, set(range(0x7E8, 0x7F0)))
             result = {can_id: data for can_id, data in answers.items() if 0x7E8 <= can_id <= 0x7EF}
+            for can_id, error in sorted(failures.items()):
+                LOGGER.debug("Functional request %s: 0x%03X failed: %s", payload.hex(), can_id, error)
             if not result:
-                raise NoResponse("No OBD-II modules answered")
+                rejection = next((error for _, error in sorted(failures.items())), None)
+                raise rejection or NoResponse("No OBD-II modules answered")
             return result
 
     def raw_command(self, line: str) -> str:
