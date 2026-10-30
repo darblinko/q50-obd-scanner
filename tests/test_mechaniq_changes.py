@@ -21,6 +21,8 @@ from q50diag.mechaniq.changes import (
     RELOAD_FAILED,
     TESTS_FAILED,
     UNDO,
+    UNDO_FAILED,
+    UNDO_RELOAD_FAILED,
     ChangeEntry,
     ChangeLog,
     clean_summary,
@@ -417,3 +419,35 @@ def test_related_tests_run_everything_when_a_changed_module_has_no_test(tmp_path
     (tests_dir / "test_broadcast.py").write_text("import json\n")
 
     assert related_tests(["q50diag/orphan.py", "tests/test_broadcast.py"], tmp_path) == []
+
+
+def test_undo_that_fails_the_tests_restores_the_files(repo, checks):
+    log = ChangeLog(repo, test_command=checks["pass"], reloader=FakeReloader())
+    (repo / "q50diag/data/table.py").write_text("VALUE = 9\n")
+    applied = log.apply("nine", ["q50diag/data/table.py"])
+    head = git(repo, "rev-parse", "HEAD")
+    log.test_command = checks["fail"]
+
+    undo = log.undo(applied.id)
+
+    assert undo.status == UNDO_FAILED, undo.report()
+    assert "nothing was undone" in undo.detail
+    assert "deliberate failure" in undo.report()
+    assert (repo / "q50diag/data/table.py").read_text() == "VALUE = 9\n"
+    assert git(repo, "rev-parse", "HEAD") == head
+    assert git(repo, "status", "--porcelain", "--", "q50diag/data/table.py") == ""
+    log.test_command = checks["pass"]
+    assert log.undo(applied.id).status == UNDO
+
+
+def test_undo_reports_reload_failure_and_counts_as_undone(repo, checks):
+    log = ChangeLog(repo, test_command=checks["pass"])
+    (repo / "q50diag/data/table.py").write_text("VALUE = 10\n")
+    applied = log.apply("ten", ["q50diag/data/table.py"], FakeReloader())
+
+    undo = log.undo(applied.id, FakeReloader(fail=True))
+
+    assert undo.status == UNDO_RELOAD_FAILED
+    assert undo.commit and "reload exploded" in undo.detail
+    assert (repo / "q50diag/data/table.py").read_text() == "VALUE = 1\n"
+    assert log.undo(applied.id).status == REJECTED

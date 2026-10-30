@@ -49,6 +49,8 @@ COMMIT_FAILED = "commit_failed"
 REJECTED = "rejected"
 UNDO = "undo"
 UNDO_FAILED = "undo_failed"
+UNDO_RELOAD_FAILED = "undo_reload_failed"  # reverted and committed, but the running app needs a restart
+UNDONE_STATUSES = (UNDO, UNDO_RELOAD_FAILED)
 
 
 @dataclass(frozen=True)
@@ -85,7 +87,7 @@ class ChangeEntry:
             lines.append(f"Reload: {self.reload_kind}")
         if self.detail:
             lines.append(self.detail)
-        if self.status == TESTS_FAILED and self.test_tail:
+        if self.status in (TESTS_FAILED, UNDO_FAILED) and self.test_tail:
             lines += ["Test output (tail):", self.test_tail]
         return "\n".join(lines)
 
@@ -300,7 +302,7 @@ class ChangeLog:
             detail = f"No committed change with id {entry_id}; list the change log for valid ids."
             return self._record(self._entry(new_id, f"undo {entry_id}", (), REJECTED, detail=detail, undoes=entry_id))
         summary = f"undo {entry_id}: {target.summary}"
-        if any(e.undoes == entry_id and e.status == UNDO for e in entries):
+        if any(e.undoes == entry_id and e.status in UNDONE_STATUSES for e in entries):
             return self._record(
                 self._entry(
                     new_id,
@@ -311,38 +313,58 @@ class ChangeLog:
                     undoes=entry_id,
                 )
             )
-        commit, error = self._revert(target)
+        commit, error, output = self._revert(target)
         if error:
-            return self._record(self._entry(new_id, summary, target.files, UNDO_FAILED, detail=error, undoes=entry_id))
+            entry = self._entry(
+                new_id, summary, target.files, UNDO_FAILED, test_tail=output, detail=error, undoes=entry_id
+            )
+            return self._record(entry)
         self._forget(target.files)
-        kind, report, _error = self._reload(target.files, reloader, f"Undo code change {entry_id}")
-        return self._record(self._entry(new_id, summary, target.files, UNDO, kind, commit, "", report, entry_id))
+        kind, report, reload_error = self._reload(target.files, reloader, f"Undo code change {entry_id}")
+        status = UNDO_RELOAD_FAILED if reload_error else UNDO
+        return self._record(self._entry(new_id, summary, target.files, status, kind, commit, output, report, entry_id))
 
-    def _revert(self, target: ChangeEntry) -> tuple[str, str]:
+    def _revert(self, target: ChangeEntry) -> tuple[str, str, str]:
         """Revert target.commit for its files only. `git revert` refuses to run
         while unrelated changes are staged, so the commit's diff is reverse
-        applied to the working tree and committed with a pathspec instead.
-        Returns (new commit hash, error text)."""
+        applied to the working tree, tested, and committed with a pathspec.
+        When the tests fail the patch is applied forward again, so the files
+        are as they were. Returns (new commit hash, error text, test output)."""
         files = target.files
         if self._git("status", "--porcelain", "--", *files).stdout.strip():
-            return "", "The files have uncommitted changes; apply or discard them before undoing."
+            return "", "The files have uncommitted changes; apply or discard them before undoing.", ""
         parent = self._git("rev-parse", "--verify", "--quiet", f"{target.commit}^")
         base = parent.stdout.strip() if parent.returncode == 0 else EMPTY_TREE
         patch = self._git_bytes("diff", "--binary", base, target.commit, "--", *files)
         if patch.returncode != 0:
-            return "", f"git diff failed: {patch.stderr.decode(errors='replace').strip()}"
-        if patch.stdout:
-            applied = self._git_bytes("apply", "-R", "-", stdin=patch.stdout)
-            if applied.returncode != 0:
-                return (
-                    "",
-                    f"Reverse patch did not apply, nothing changed: {applied.stderr.decode(errors='replace').strip()}",
-                )
+            return "", f"git diff failed: {patch.stderr.decode(errors='replace').strip()}", ""
+        if not patch.stdout:
+            return "", "The commit changed none of these files; nothing to revert.", ""
+        applied = self._git_bytes("apply", "-R", "-", stdin=patch.stdout)
+        if applied.returncode != 0:
+            stderr = applied.stderr.decode(errors="replace").strip()
+            return "", f"Reverse patch did not apply, nothing changed: {stderr}", ""
+        passed, output = self._run_tests(files)
+        if not passed:
+            return "", self._restore_after_failed_undo(patch.stdout), output
         message = f'Revert "{COMMIT_PREFIX}{target.summary}"\n\nThis reverts commit {target.commit}.'
         commit, error = self._commit(message, files)
         if not commit and not error:
             error = "The commit changed none of these files; nothing to revert."
-        return commit, error
+        return commit, error, tail(output)
+
+    def _restore_after_failed_undo(self, patch: bytes) -> str:
+        restored = self._git_bytes("apply", "-", stdin=patch)
+        if restored.returncode != 0:
+            stderr = restored.stderr.decode(errors="replace").strip()
+            return (
+                "Tests failed with the change reverted, and restoring the files also failed: "
+                f"{stderr}. Run git restore on the listed files."
+            )
+        return (
+            "Tests failed with the change reverted, so nothing was undone; the files are unchanged. "
+            "A later change probably depends on this one: undo that change first."
+        )
 
     # Git --------------------------------------------------------------------
     def _git(self, *args: str) -> subprocess.CompletedProcess:

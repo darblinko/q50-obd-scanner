@@ -35,7 +35,7 @@ RENDER_INTERVAL_MS = 100  # at most about 10 renders per second while text strea
 STATUS_COLORS = {"running": theme.WARN, "done": theme.OK, "failed": theme.FAULT}
 AGENT_STATE_LABELS = {"idle": "idle", "running": "working", "done": "done", "failed": "failed"}
 CHANGE_STATUS_STATES = {"tests_failed": "fault", "committed": "ok", "applied": "ok", "undone": "idle"}
-NOT_UNDOABLE = ("tests_failed", "undo", "undone", "reverted")
+NOT_UNDOABLE = ("tests_failed", "undo", "undo_reload_failed", "undone", "reverted")
 CHIP_TITLE_LIMIT = 16
 KEY_PROMPT_TEXT = (
     "MechanIQ needs an Anthropic API key before it can answer. Click Add API key and paste "
