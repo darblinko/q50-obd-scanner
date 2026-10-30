@@ -109,12 +109,21 @@ def usable_git() -> str | None:
     return git
 
 
+NO_GIT_NOTICE = (
+    "q50diag: git was not found; MechanIQ code changes still apply but are not recorded "
+    "and cannot be undone. READ-ME-FIRST.txt explains how to install Git."
+)
+
+
 def init_git_repo(workspace: Path) -> None:
     """MechanIQ commits each applied change and undoes by commit, so the
     workspace must be a git repository. Without git, edits still apply but
-    are not recorded or undoable."""
+    are not recorded or undoable, and a notice is printed."""
     git = usable_git()
-    if git is None or (workspace / ".git").exists():
+    if git is None:
+        print(NO_GIT_NOTICE, file=sys.stderr)
+        return
+    if (workspace / ".git").exists():
         return
     for args in (
         ["init", "-q"],

@@ -73,3 +73,12 @@ def test_run_pytest_exits_with_pytest_code_before_teardown(launcher, monkeypatch
     monkeypatch.setattr(launcher.sys, "path", list(launcher.sys.path))
     launcher.run_pytest(["-q"])
     assert exits == [1]
+
+
+def test_missing_git_prints_a_notice_and_skips_the_repository(launcher, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(launcher, "usable_git", lambda: None)
+    workspace = tmp_path / "app"
+    workspace.mkdir()
+    launcher.init_git_repo(workspace)
+    assert "git was not found" in capsys.readouterr().err
+    assert not (workspace / ".git").exists()

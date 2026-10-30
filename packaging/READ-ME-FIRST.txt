@@ -1,8 +1,9 @@
 Q50 DIAG: READ ME FIRST
 =======================
 
-You do not need to install anything else. Everything the app needs is in
-the zip file you downloaded.
+Everything the app needs to read the car is in the zip file you downloaded.
+One optional program, Git, is not included: MechanIQ uses it to record and
+undo the changes it makes to the app itself (see "MECHANIQ" below).
 
 What you need
 - A Windows 10 or Windows 11 PC (64-bit), or a Mac with macOS 14 (Sonoma)
@@ -77,6 +78,15 @@ API key. Everything else in the app works without one.
 2. In the app, open MechanIQ settings, paste your API key and save.
 3. Keep the key private, like a password. Anyone who has it can use your
    paid account.
+
+MechanIQ can change the app's own code when you ask it to. It records each
+change with Git so you can undo it. Without Git the change still takes
+effect, but it is not recorded and cannot be undone; the change list then
+says "git is not installed on this computer". To install Git:
+- Windows: download "Git for Windows" from git-scm.com, run the installer
+  with its default choices, then restart the app.
+- Mac: open the Terminal app, type  xcode-select --install  and press
+  Return, then click "Install" and restart the app.
 
 On a small screen, click ">>" at the top of the MechanIQ panel to fold it
 away and give the page more room. Pages that still do not fit get scroll
