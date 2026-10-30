@@ -22,6 +22,7 @@ from q50diag.recorder import list_recordings
 
 log = logging.getLogger(__name__)
 
+SESSION_MILESTONES = frozenset({"overview", "live reading", "explorer scan", "console reply"})
 LIVE_KEYS = ("adapter.voltage", "obd.01.0C", "obd.01.0D", "bcast.300.assist_raw", "PCM.22.F405")
 
 
@@ -34,7 +35,8 @@ class SmokeRun(QObject):
         self.screenshot_dir = screenshot_dir
         self.started = time.monotonic()
         self.failures: list[str] = []
-        self.ctx.session.error.connect(lambda text: log.warning("smoke: session error: %s", text))
+        self.seen: set[str] = set()
+        self._wire_milestones()
         steps: list[tuple[float, Callable[[], None]]] = [
             (0.10, self._full_scan),
             (0.30, self._bus_monitor),
@@ -46,6 +48,31 @@ class SmokeRun(QObject):
         ]
         for fraction, step in steps:
             QTimer.singleShot(int(self.seconds * fraction * 1000), self._guard(step))
+
+    def _wire_milestones(self) -> None:
+        session = self.ctx.session
+        session.error.connect(self._on_error)
+        session.overview_ready.connect(lambda _overview: self.seen.add("overview"))
+        session.readings.connect(self._on_readings)
+        session.identifiers_scanned.connect(lambda _scan: self.seen.add("explorer scan"))
+        session.raw_response.connect(lambda _request, _response: self.seen.add("console reply"))
+
+    def _on_error(self, text: str) -> None:
+        log.warning("smoke: session error: %s", text)
+        failure = f"session error: {text}"
+        if failure not in self.failures:  # a polling error repeats every round
+            self.failures.append(failure)
+
+    def _on_readings(self, readings) -> None:
+        if any(not reading.error for reading in readings):
+            self.seen.add("live reading")
+
+    def _check_milestones(self) -> None:
+        """The bus monitor step cancels the full scan, so trouble codes are not required."""
+        if not self.ctx.session.connected:
+            self.failures.append("not connected at the end of the run")
+        for milestone in sorted(SESSION_MILESTONES - self.seen):
+            self.failures.append(f"missing milestone: {milestone}")
 
     def _guard(self, step: Callable[[], None]) -> Callable[[], None]:
         def run() -> None:
@@ -102,6 +129,7 @@ class SmokeRun(QObject):
             QTimer.singleShot(1500, explorer.start_watch)
 
     def _finish(self) -> None:
+        self._check_milestones()
         if self.ctx.recorder.is_recording:
             self.ctx.stop_recording()
         recordings = self.page("Recordings")
@@ -109,6 +137,8 @@ class SmokeRun(QObject):
         saved = list_recordings(recordings.folder)
         if saved:
             recordings.open_recording(saved[0])
+        if self.ctx.vehicle.has_steering_page and not saved:  # the steering watch records
+            self.failures.append("missing milestone: recording")
         if self.screenshot_dir:
             self.screenshot_dir.mkdir(parents=True, exist_ok=True)
             QTimer.singleShot(300, self._screenshots)
