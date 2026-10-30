@@ -103,9 +103,9 @@ jobs:
 
       # MechanIQ runs these shipped tests inside the build before it applies a
       # change, with sys.frozen set. A failure here means MechanIQ edits on this
-      # OS would be rejected; it is reported without blocking the zip.
+      # OS would be rejected, so it fails the build. Tests that cannot run in a
+      # build skip themselves (tests/test_packaging_launcher.py, git-only tests).
       - name: Shipped test suite inside the build (MechanIQ test gate)
-        continue-on-error: true
         timeout-minutes: 20
         shell: bash
         run: |
