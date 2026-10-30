@@ -302,6 +302,34 @@ def test_commit_failure_is_reported(repo, checks):
     assert "hook says no" in entry.detail
 
 
+def test_commit_and_undo_without_a_configured_identity(repo, checks, monkeypatch, tmp_path):
+    """A packaged build may run where git has no user.name or user.email."""
+    git(repo, "config", "--unset", "user.name")
+    git(repo, "config", "--unset", "user.email")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "no-global-config"))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    for name in ("EMAIL", "GIT_AUTHOR_NAME", "GIT_AUTHOR_EMAIL", "GIT_COMMITTER_NAME", "GIT_COMMITTER_EMAIL"):
+        monkeypatch.delenv(name, raising=False)
+    log = _change_log(repo, checks["pass"])
+    (repo / "q50diag/data/table.py").write_text("VALUE = 11\n")
+
+    entry = log.apply("no identity", ["q50diag/data/table.py"], FakeReloader())
+    assert entry.status == APPLIED, entry.report()
+    assert git(repo, "log", "-1", "--format=%an <%ae>").strip() == "q50diag <q50diag@localhost>"
+    undo = log.undo(entry.id, FakeReloader())
+    assert undo.status == UNDO and len(undo.commit) == 40, undo.report()
+    assert (repo / "q50diag/data/table.py").read_text() == "VALUE = 1\n"
+
+
+def test_commit_keeps_the_configured_identity(repo, checks):
+    log = _change_log(repo, checks["pass"])
+    (repo / "q50diag/data/table.py").write_text("VALUE = 12\n")
+    entry = log.apply("own identity", ["q50diag/data/table.py"], FakeReloader())
+    assert entry.status == APPLIED, entry.report()
+    assert git(repo, "log", "-1", "--format=%an <%ae>").strip() == "MechanIQ Test <mechaniq-test@example.invalid>"
+
+
 def test_pending_edits_ignores_baseline_and_failed_versions(repo, checks):
     (repo / "q50diag/data/other.py").write_text("OTHER = 'before mechaniq'\n")
     log = _change_log(repo, checks["pass"])

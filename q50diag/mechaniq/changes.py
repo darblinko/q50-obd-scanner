@@ -33,6 +33,8 @@ LOG_NAME = Path("logs") / "mechaniq-changes.jsonl"
 COMMIT_PREFIX = "fix(mechaniq): "
 WATCHED_DIRS = ("q50diag", "tests")
 TEST_TIMEOUT_S = 300.0  # the full suite takes about 240 s; related-test selection keeps most runs short
+# Matches packaging/launcher.py GIT_IDENTITY, used for the workspace's first commit.
+MANAGED_IDENTITY = ("-c", "user.name=q50diag", "-c", "user.email=q50diag@localhost")
 GIT_TIMEOUT_S = 60.0
 TAIL_LINES = 40
 TAIL_CHARS = 4000
@@ -380,10 +382,16 @@ class ChangeLog:
         if self._git("diff", "--cached", "--quiet", "--", *files).returncode == 0:
             return "", ""
         # A pathspec commits only these files even when other changes are staged.
-        committed = self._git("commit", "-q", "-m", message, "--", *files)
+        committed = self._git(*self._identity(), "commit", "-q", "-m", message, "--", *files)
         if committed.returncode != 0:
             return "", f"git commit failed: {(committed.stderr or committed.stdout).strip()}"
         return self._head(), ""
+
+    def _identity(self) -> tuple[str, ...]:
+        """The configured identity when git has one, otherwise the managed one.
+        `git var` applies the same strict check as `git commit`."""
+        known = all(self._git("var", name).returncode == 0 for name in ("GIT_AUTHOR_IDENT", "GIT_COMMITTER_IDENT"))
+        return () if known else MANAGED_IDENTITY
 
     def _head(self) -> str:
         result = self._git("rev-parse", "HEAD")
