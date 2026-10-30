@@ -14,6 +14,9 @@ LOGGER = logging.getLogger(__name__)
 _sessions: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
 _session_lock = threading.RLock()
 PROBE_FAILURES = (NoResponse, NegativeResponse, RequestBlocked)
+# 7E/7F: (sub)function not supported in active session (ISO 14229);
+# 80: service not supported in active diagnostic mode (ISO 14230).
+WRONG_SESSION_NRCS = (0x7E, 0x7F, 0x80)
 
 
 def reset_sessions() -> None:
@@ -22,6 +25,8 @@ def reset_sessions() -> None:
 
 
 def ensure_session(t: Transport, module: ModuleAddress) -> None:
+    """Enter session C0, else 03. Only a positive reply is cached, so a failed
+    entry is attempted again before the next read."""
     with _session_lock:
         generation = getattr(t, "connection_generation", 0)
         saved_generation, addresses = _sessions.get(t, (generation, set()))
@@ -33,12 +38,36 @@ def ensure_session(t: Transport, module: ModuleAddress) -> None:
             try:
                 reply = t.request(module.tx_id, module.rx_id, request, timeout_s=0.3)
                 if reply[:2] == bytes((0x50, request[1])):
+                    addresses.add(module.tx_id)
                     break
                 LOGGER.debug("Unexpected session response from %s: %s", module.name, reply.hex())
             except PROBE_FAILURES as error:
                 LOGGER.debug("Session %s on %s: %s", request.hex(), module.name, error)
-        addresses.add(module.tx_id)
         _sessions[t] = (generation, addresses)
+
+
+def forget_session(t: Transport, module: ModuleAddress) -> None:
+    with _session_lock:
+        entry = _sessions.get(t)
+        if entry is not None:
+            entry[1].discard(module.tx_id)
+
+
+def request(
+    t: Transport, module: ModuleAddress, payload: bytes, timeout_s: float = 1.0, allow_clear: bool = False
+) -> bytes:
+    """Send `payload` in the module's diagnostic session. A wrong-session NRC
+    (the session expired or a 10 81 returned the module to default) clears the
+    cached entry, re-enters the session and retries once."""
+    ensure_session(t, module)
+    try:
+        return t.request(module.tx_id, module.rx_id, payload, timeout_s=timeout_s, allow_clear=allow_clear)
+    except NegativeResponse as error:
+        if error.code not in WRONG_SESSION_NRCS:
+            raise
+    forget_session(t, module)
+    ensure_session(t, module)
+    return t.request(module.tx_id, module.rx_id, payload, timeout_s=timeout_s, allow_clear=allow_clear)
 
 
 def read_identification(t: Transport, module: ModuleAddress) -> dict[str, str]:

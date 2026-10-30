@@ -12,8 +12,6 @@ source and confidence of its identifier and formula."""
 from __future__ import annotations
 
 import logging
-import threading
-import weakref
 
 from q50diag.core.transport import NegativeResponse, NoResponse, RequestBlocked, Transport
 from q50diag.core.types import Dtc, ModuleAddress, ParameterDef
@@ -25,8 +23,6 @@ PROBE_FAILURES = (NoResponse, NegativeResponse, RequestBlocked)
 WRONG_SESSION_NRCS = (0x7E, 0x7F)
 DTC_STATUS_MASK = 0xFF
 IDENTIFICATION_DIDS = (("VIN", 0xF190), ("Software part number", 0xF188), ("ECU part number", 0xF113))
-_extended: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
-_lock = threading.RLock()
 
 
 def describe(code: str) -> str:
@@ -34,8 +30,8 @@ def describe(code: str) -> str:
 
 
 def reset_sessions() -> None:
-    with _lock:
-        _extended.clear()
+    """No session state is kept: request() asks for the extended session after
+    every wrong-session NRC, so an expired or exited session is re-entered."""
 
 
 def ensure_session(t: Transport, module: ModuleAddress) -> None:
@@ -43,19 +39,10 @@ def ensure_session(t: Transport, module: ModuleAddress) -> None:
 
 
 def _enter_extended(t: Transport, module: ModuleAddress) -> None:
-    with _lock:
-        generation = getattr(t, "connection_generation", 0)
-        saved, addresses = _extended.get(t, (generation, set()))
-        if saved != generation:
-            addresses = set()
-        if module.tx_id in addresses:
-            return
-        try:
-            t.request(module.tx_id, module.rx_id, b"\x10\x03", timeout_s=0.3)
-        except PROBE_FAILURES as error:
-            LOGGER.debug("Extended session on %s: %s", module.name, error)
-        addresses.add(module.tx_id)
-        _extended[t] = (generation, addresses)
+    try:
+        t.request(module.tx_id, module.rx_id, b"\x10\x03", timeout_s=0.3)
+    except PROBE_FAILURES as error:
+        LOGGER.debug("Extended session on %s: %s", module.name, error)
 
 
 def request(

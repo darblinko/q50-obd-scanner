@@ -23,7 +23,7 @@ class VehicleProfile:
     year: int
     modules: tuple[ModuleAddress, ...]
     obd_module: str  # module whose request id answers Mode 01: "ECM" or "PCM"
-    diag: ModuleType  # ensure_session, reset_sessions, read_identification, read/clear_module_dtcs
+    diag: ModuleType  # request, ensure_session, reset_sessions, read_identification, read/clear_module_dtcs
     module_parameters: Callable[[ModuleAddress], list[ParameterDef]]
     broadcast_signals: Mapping[str, tuple[str, str]]
     decode_frame: Callable[[CanFrame], dict[str, Value]]

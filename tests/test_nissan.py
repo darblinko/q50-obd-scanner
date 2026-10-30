@@ -46,7 +46,7 @@ def test_session_fallback_and_no_session_supported():
     unsupported = ProbeTransport()
     nissan.ensure_session(unsupported, EPS)
     nissan.ensure_session(unsupported, EPS)
-    assert len(unsupported.requests) == 2
+    assert len(unsupported.requests) == 4  # a failed entry is not cached
 
 
 def test_identification_continues_after_failed_probes():

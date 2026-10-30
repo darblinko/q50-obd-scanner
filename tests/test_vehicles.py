@@ -218,3 +218,84 @@ def test_build_options_takes_a_vehicle_specific_append(tmp_path):
     assert options.system_prompt["append"] == text
     default = build_options(MechaniqSettings(), tmp_path, None, None, base_env={})
     assert default.system_prompt["append"] == prompt.SYSTEM_APPEND
+
+
+class SessionModule:
+    """A module that answers 22/21 reads only in a non-default session.
+    10 81 (or `expire()`) returns it to the default session."""
+
+    def __init__(self, enter: bytes, read: bytes, reply: bytes, wrong_session_nrc: int = 0x7F):
+        self.enter, self.read, self.reply, self.nrc = enter, read, reply, wrong_session_nrc
+        self.in_session = False
+        self.sent = []
+        self.connection_generation = 1
+
+    def expire(self):
+        self.in_session = False
+
+    def request(self, tx_id, rx_id, payload, timeout_s=1.0, allow_clear=False):
+        self.sent.append(payload)
+        if payload == self.enter:
+            self.in_session = True
+            return bytes((0x50, payload[1]))
+        if payload == b"\x10\x81":
+            self.in_session = False
+            return b"\x50\x81"
+        if payload[:1] == b"\x10":
+            raise NegativeResponse(0x10, 0x12)
+        if payload == self.read:
+            if not self.in_session:
+                raise NegativeResponse(payload[0], self.nrc)
+            return self.reply
+        raise NoResponse("silent")
+
+
+def test_ford_reenters_extended_session_after_it_expires():
+    ford.reset_sessions()
+    module = SessionModule(b"\x10\x03", b"\x22\xf4\x05", b"\x62\xf4\x05\x5a")
+    assert ford.request(module, PCM, b"\x22\xf4\x05") == b"\x62\xf4\x05\x5a"
+    module.expire()
+    assert ford.request(module, PCM, b"\x22\xf4\x05") == b"\x62\xf4\x05\x5a"
+    assert module.sent.count(b"\x10\x03") == 2
+
+
+def test_nissan_reenters_session_after_return_to_default():
+    nissan.reset_sessions()
+    eps = next(m for m in KNOWN_MODULES if m.name == "EPS")
+    module = SessionModule(b"\x10\xc0", b"\x21\x01", b"\x61\x01\x00", wrong_session_nrc=0x80)
+    assert nissan.request(module, eps, b"\x21\x01") == b"\x61\x01\x00"
+    module.request(eps.tx_id, eps.rx_id, b"\x10\x81")
+    assert nissan.request(module, eps, b"\x21\x01") == b"\x61\x01\x00"
+    assert module.sent.count(b"\x10\xc0") == 2
+
+
+def test_nissan_failed_session_entry_is_not_cached():
+    nissan.reset_sessions()
+    eps = next(m for m in KNOWN_MODULES if m.name == "EPS")
+    module = SessionModule(b"\x10\x99", b"\x21\x01", b"\x61\x01\x00")
+    nissan.ensure_session(module, eps)
+    nissan.ensure_session(module, eps)
+    assert module.sent.count(b"\x10\xc0") == 2
+
+
+def test_backend_live_read_uses_ford_extended_session_retry():
+    from q50diag.gui.backend import Backend
+
+    ford.reset_sessions()
+    backend = Backend(MUSTANG_GT)
+    pcm = backend.module_by_name("PCM")
+    coolant = next(p for p in backend.module_parameters(pcm) if p.request == b"\x22\xf4\x05")
+    module = SessionModule(b"\x10\x03", b"\x22\xf4\x05", b"\x62\xf4\x05\x5a")
+    reading = backend.read_parameter(module, pcm, coolant)
+    assert not reading.error and reading.value == 50
+    assert module.sent == [b"\x22\xf4\x05", b"\x10\x03", b"\x22\xf4\x05"]
+
+
+def test_backend_identifier_scan_uses_ford_extended_session_retry():
+    from q50diag.gui.backend import Backend
+
+    ford.reset_sessions()
+    backend = Backend(MUSTANG_GT)
+    pcm = backend.module_by_name("PCM")
+    module = SessionModule(b"\x10\x03", b"\x22\xf4\x05", b"\x62\xf4\x05\x5a")
+    assert backend.scan_identifiers(module, pcm, 0x22, 0xF405, 0xF405) == {0xF405: b"\x5a"}

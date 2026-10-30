@@ -143,7 +143,7 @@ class Backend:
     def read_parameter(self, t: Transport, m: ModuleAddress, p: ParameterDef) -> Reading:
         from q50diag.protocol.reader import read_parameter
 
-        return read_parameter(t, m, p, self.vehicle.diag.ensure_session)
+        return read_parameter(t, m, p, self.vehicle.diag.request)
 
     def decode_reply(self, p: ParameterDef, raw: bytes) -> Reading:
         from q50diag.protocol.reader import decode_reply
@@ -181,9 +181,7 @@ class Backend:
     ) -> dict[int, bytes]:
         from q50diag.protocol.explorer import scan_identifiers
 
-        return scan_identifiers(
-            t, m, service, start, end, progress=progress, stop=stop, session=self.vehicle.diag.ensure_session
-        )
+        return scan_identifiers(t, m, service, start, end, progress=progress, stop=stop, send=self.vehicle.diag.request)
 
     def diff_snapshots(self, a: dict[int, bytes], b: dict[int, bytes]) -> dict[int, list[int]]:
         from q50diag.protocol.explorer import diff_snapshots

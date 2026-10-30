@@ -739,7 +739,12 @@ class Session(QObject):
     def _do_raw_command(self, line: str) -> None:
         transport = self._require()
         self.raw_log.emit("TX", line)
-        response = transport.raw_command(line)
+        try:
+            response = transport.raw_command(line)
+        finally:
+            compact = "".join(line.upper().split())
+            if compact.startswith("10") and all(c in "0123456789ABCDEF" for c in compact):
+                self.backend.reset_sessions()  # the module's session may have changed
         self.raw_log.emit("RX", response)
         self.raw_response.emit(line, response)
 
@@ -753,4 +758,7 @@ class Session(QObject):
             text = "NO DATA"
         except NegativeResponse as exc:
             text = f"7F {exc.service:02X} {exc.code:02X} (negative response)"
+        finally:
+            if payload[:1] == b"\x10":
+                self.backend.reset_sessions()  # the module's session may have changed
         self.raw_response.emit(request_text, text)

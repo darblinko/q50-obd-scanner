@@ -3,16 +3,17 @@
 import logging
 
 from q50diag.core.transport import NegativeResponse, NoResponse, RequestBlocked
-from q50diag.protocol.nissan import ensure_session
+from q50diag.protocol import nissan
 
 LOGGER = logging.getLogger(__name__)
 
 
 def scan_identifiers(
-    t, module, service: int, start: int, end: int, progress=None, stop=None, session=ensure_session
+    t, module, service: int, start: int, end: int, progress=None, stop=None, send=nissan.request
 ) -> dict[int, bytes]:
     """Scan the inclusive interval [start, end]; progress is (done, total, label).
-    `session(t, module)` prepares the module first (Nissan session by default)."""
+    Each read goes through `send(t, module, payload, timeout_s=...)`, the
+    vehicle's request policy (Nissan session handling by default)."""
     if service not in (0x21, 0x22):
         raise ValueError("Explorer only supports read services 0x21 and 0x22")
     width = 1 if service == 0x21 else 2
@@ -20,14 +21,13 @@ def scan_identifiers(
         raise ValueError("Identifier range is invalid")
     if stop is not None and stop.is_set():
         return {}
-    session(t, module)
     result = {}
     for identifier in range(start, end + 1):
         if stop is not None and stop.is_set():
             break
         request = bytes((service,)) + identifier.to_bytes(width, "big")
         try:
-            reply = t.request(module.tx_id, module.rx_id, request, timeout_s=0.1)
+            reply = send(t, module, request, timeout_s=0.1)
             echo = bytes((service + 0x40,)) + request[1:]
             if reply.startswith(echo):
                 result[identifier] = reply[len(echo) :]

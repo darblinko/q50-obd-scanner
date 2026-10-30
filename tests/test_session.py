@@ -253,6 +253,18 @@ def test_read_module_reports_identification_and_responding(session):
     assert not bcm.responding and bcm.errors
 
 
+def test_raw_session_control_forgets_cached_sessions(session, backend, monkeypatch):
+    connect(session)
+    resets = []
+    monkeypatch.setattr(backend, "reset_sessions", lambda: resets.append(True))
+    got = Collector(session, "raw_response")
+    session.raw_request(EPS, bytes.fromhex("2101"))
+    session.raw_request(EPS, bytes.fromhex("1081"))
+    session.raw_command("10 C0")
+    assert wait_until(lambda: len(got["raw_response"]) == 3)
+    assert len(resets) == 2
+
+
 def test_scan_identifiers_and_raw(session):
     connect(session)
     got = Collector(session, "identifiers_scanned", "raw_response", "raw_log")
