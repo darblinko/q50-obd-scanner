@@ -306,3 +306,51 @@ def test_transport_reload_when_disconnected_only_reloads(ctx):
 def test_report_text_lists_restart_files():
     report = reload_mod.ReloadReport(kind="restart", restart_files=("q50diag/session.py",))
     assert "Restart required for: q50diag/session.py" in report.text()
+
+
+class FailingWindow(FakeWindow):
+    def rebuild_page(self, title: str) -> None:
+        raise RuntimeError("constructor exploded")
+
+
+def test_page_rebuild_failure_is_a_reload_error(ctx, probe_dirs):
+    (probe_dirs["q50diag.gui.pages"] / "_mechaniq_probe_broken_page.py").write_text(
+        "from PySide6.QtWidgets import QWidget\n\nclass BrokenPage(QWidget):\n    title = 'Broken'\n"
+    )
+    importlib.import_module("q50diag.gui.pages._mechaniq_probe_broken_page")
+    plan = ReloadPlan(live_modules=("q50diag.gui.pages._mechaniq_probe_broken_page",))
+    report = HotReloader(FailingWindow(("Broken",)), ctx).apply(plan)
+    assert not report.ok
+    assert "Broken" in report.error and "constructor exploded" in report.error
+    assert report.pages_rebuilt == ()
+
+
+def test_transport_reload_aborts_while_the_worker_is_still_busy(ctx, monkeypatch):
+    importlib.import_module("q50diag.transport.ports")
+    monkeypatch.setattr(reload_mod, "DISCONNECT_WAIT_S", 0.3)
+    session = ctx.session
+    release = threading.Event()
+    started = threading.Event()
+
+    def long_request():
+        started.set()
+        release.wait(5.0)
+
+    session._submit("Long request", long_request)
+    assert started.wait(2.0)
+    try:
+        report = HotReloader(FakeWindow(), ctx).apply(classify(["q50diag/transport/ports.py"]))
+    finally:
+        release.set()
+    assert not report.ok
+    assert "not reloaded" in report.error
+    assert report.reconnect_port is None and "q50diag.transport.ports" not in report.reloaded
+    assert wait_until(lambda: not session.connected)
+    assert len(ctx.backend.transports) == 1
+
+
+def test_disconnect_acknowledges_after_the_transport_is_closed(ctx):
+    closed = threading.Event()
+    ctx.session.disconnect_port(closed)
+    assert closed.wait(3.0)
+    assert not ctx.backend.transports[0].is_open

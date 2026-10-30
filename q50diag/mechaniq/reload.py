@@ -22,6 +22,7 @@ import importlib
 import importlib.util
 import logging
 import sys
+import threading
 import time
 import traceback
 from collections.abc import Iterable
@@ -52,7 +53,7 @@ RANKS = (
 CATALOG_INPUTS = ("q50diag.data", "q50diag.protocol", "q50diag.gui.catalog")
 RECONNECT_MARKER = "Reconnected after code change"
 RECONNECT_TIMEOUT_MS = 15000
-DISCONNECT_WAIT_S = 3.0
+DISCONNECT_WAIT_S = 10.0  # the worker finishes its request in flight and closes the transport
 APPLY_TIMEOUT_S = 60.0
 
 
@@ -362,7 +363,8 @@ class HotReloader:
         if any(_within(m, p) for m in reloaded for p in CATALOG_INPUTS):
             self.ctx.rebuild_catalog()
             self._refresh_subscriptions()
-        pages = self._rebuild_pages(reloaded, notes)
+        pages, page_error = self._rebuild_pages(reloaded, notes)
+        error = error or page_error
         if label:
             self.ctx.mark_event(label)
         port = None
@@ -391,15 +393,17 @@ class HotReloader:
                 fresh.append((module, entry.param) if entry is not None else (module, param))
             session.start_polling(owner, fresh)
 
-    def _rebuild_pages(self, reloaded: list[str], notes: list[str]) -> list[str]:
+    def _rebuild_pages(self, reloaded: list[str], notes: list[str]) -> tuple[list[str], str]:
+        """Rebuilt page titles and the error text of the pages that failed to build."""
         titles = page_titles(reloaded)
         if not titles:
-            return []
+            return [], ""
         if self.window is None or not hasattr(self.window, "rebuild_page"):
             notes.append("no main window to rebuild pages: " + ", ".join(titles))
-            return []
+            return [], ""
         present = getattr(self.window, "pages", None)
         rebuilt: list[str] = []
+        failures: list[str] = []
         for title in titles:
             if present is not None and title not in present:
                 continue
@@ -407,10 +411,10 @@ class HotReloader:
                 self.window.rebuild_page(title)
             except Exception as exc:  # noqa: BLE001 (the old page stays in place)
                 log.exception("rebuild of page %s failed", title)
-                notes.append(f"page {title} was not rebuilt: {exc}")
+                failures.append(f"page {title} was not rebuilt and the old page is still shown: {exc}")
                 continue
             rebuilt.append(title)
-        return rebuilt
+        return rebuilt, "; ".join(failures)
 
     def _reload_transport(self, modules: tuple[str, ...], notes: list[str]) -> tuple[str | None, list[str], str]:
         """Disconnect, reload the transport modules, reconnect the same port and
@@ -423,8 +427,15 @@ class HotReloader:
             return None, reloaded, error
         subscriptions = session.polling_snapshot()
         monitor_on, monitor_ids = session.bus_monitor_active, session.bus_monitor_ids
-        session.disconnect_port()
-        self._wait_disconnected(session)
+        closed = threading.Event()
+        session.disconnect_port(closed)
+        if not closed.wait(DISCONNECT_WAIT_S):
+            error = (
+                "the session worker did not finish its request and close the adapter within "
+                f"{DISCONNECT_WAIT_S:.0f} s, so the transport modules were not reloaded. "
+                "Reconnect and apply again, or restart the app."
+            )
+            return None, [], error
         reloaded, error = reload_modules(modules)
         self._watch_reconnect(port)
         session.connect_port(port)
@@ -433,12 +444,6 @@ class HotReloader:
         if monitor_on:
             session.start_bus_monitor(monitor_ids)
         return port, reloaded, error
-
-    def _wait_disconnected(self, session) -> None:
-        """Let the worker finish the request in flight before its module code is replaced."""
-        deadline = time.monotonic() + DISCONNECT_WAIT_S
-        while session.connected and time.monotonic() < deadline:
-            time.sleep(0.01)
 
     def _watch_reconnect(self, port: str) -> None:
         if self._watch is not None:

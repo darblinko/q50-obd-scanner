@@ -271,12 +271,14 @@ class Session(QObject):
     def connect_port(self, port: str) -> None:
         self._submit("Connect", self._do_connect, port)
 
-    def disconnect_port(self) -> None:
+    def disconnect_port(self, done: threading.Event | None = None) -> None:
+        """Queue a disconnect. `done` is set by the worker once the command in
+        flight has returned and the transport is closed."""
         with self._lock:
             self._subscriptions.clear()
             self._monitor_on = False
         self._cancel.set()
-        self._submit("Disconnect", self._do_disconnect)
+        self._submit("Disconnect", self._do_disconnect, done)
 
     def read_vehicle_overview(self) -> None:
         self._submit("Vehicle overview", self._do_overview)
@@ -596,13 +598,17 @@ class Session(QObject):
         self.status.emit(f"Connected to {label}: {info.identity}, {info.protocol}")
         self._do_overview()
 
-    def _do_disconnect(self) -> None:
-        if self._transport is None:
-            self.status.emit("Not connected")
-            return
-        self._close_transport()
-        self.activity_changed.emit()
-        self.status.emit("Disconnected")
+    def _do_disconnect(self, done: threading.Event | None = None) -> None:
+        try:
+            if self._transport is None:
+                self.status.emit("Not connected")
+                return
+            self._close_transport()
+            self.activity_changed.emit()
+            self.status.emit("Disconnected")
+        finally:
+            if done is not None:
+                done.set()
 
     def _do_overview(self) -> None:
         transport = self._require()
