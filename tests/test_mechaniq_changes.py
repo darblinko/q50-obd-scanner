@@ -360,3 +360,32 @@ def test_related_tests_selects_tests_that_name_the_changed_module(tmp_path):
     assert related_tests(["q50diag/protocol/obd2.py"], tmp_path) == ["tests/test_other.py"]
     assert related_tests(["tests/test_unrelated.py"], tmp_path) == ["tests/test_unrelated.py"]
     assert related_tests(["README.md"], tmp_path) == []
+
+
+def test_related_tests_follow_modules_that_import_the_changed_module(tmp_path):
+    from q50diag.mechaniq.changes import related_tests
+
+    package = tmp_path / "q50diag" / "protocol"
+    package.mkdir(parents=True)
+    (package / "obd_fields.py").write_text("class Field: ...\n")
+    (package / "obd2.py").write_text("from q50diag.protocol.obd_fields import Field\n")
+    (package / "reader.py").write_text("from q50diag.protocol import obd2\n")
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_reader.py").write_text("from q50diag.protocol.reader import read\n")
+    (tests_dir / "test_broadcast.py").write_text("import json\n")
+
+    changed = ["q50diag/protocol/obd_fields.py", "tests/test_broadcast.py"]
+    assert related_tests(changed, tmp_path) == ["tests/test_broadcast.py", "tests/test_reader.py"]
+
+
+def test_related_tests_run_everything_when_a_changed_module_has_no_test(tmp_path):
+    from q50diag.mechaniq.changes import related_tests
+
+    (tmp_path / "q50diag").mkdir()
+    (tmp_path / "q50diag" / "orphan.py").write_text("VALUE = 1\n")
+    tests_dir = tmp_path / "tests"
+    tests_dir.mkdir()
+    (tests_dir / "test_broadcast.py").write_text("import json\n")
+
+    assert related_tests(["q50diag/orphan.py", "tests/test_broadcast.py"], tmp_path) == []

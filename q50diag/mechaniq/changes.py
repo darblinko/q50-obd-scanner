@@ -10,6 +10,7 @@ worker thread; the reloader moves its own work to the Qt main thread."""
 
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import logging
@@ -448,24 +449,68 @@ class ChangeLog:
 
 def related_tests(files: Sequence[str], project_root: Path) -> list[str]:
     """Test files that exercise the changed files: changed test files plus any
-    test module that names a changed q50diag module. Empty means run all."""
-    tests_dir = Path(project_root) / "tests"
-    modules: list[str] = []
+    test module that names a changed q50diag module or a module that imports
+    one, directly or transitively. Empty means run all, which is also the
+    answer when a changed module is reached by no test file."""
+    root = Path(project_root)
+    test_files = sorted((root / "tests").glob("test_*.py"))
+    texts = {path: path.read_text(encoding="utf-8", errors="replace") for path in test_files}
+    importers = _importers(root)
     selected: set[str] = set()
     for item in files:
         path = Path(item)
         if path.parts[:1] == ("tests",) and path.name.startswith("test_") and path.suffix == ".py":
             selected.add(path.as_posix())
         elif path.parts[:1] == ("q50diag",) and path.suffix == ".py":
-            parts = list(path.with_suffix("").parts)
-            if parts[-1] == "__init__":
-                parts.pop()
-            modules.append(".".join(parts))
-    for test_file in sorted(tests_dir.glob("test_*.py")):
-        text = test_file.read_text(encoding="utf-8", errors="replace")
-        if any(_names_module(text, module) for module in modules):
-            selected.add(test_file.relative_to(project_root).as_posix())
+            affected = _with_dependents(_module_name(path), importers)
+            matched = [test for test, text in texts.items() if any(_names_module(text, m) for m in affected)]
+            if not matched:
+                return []
+            selected.update(test.relative_to(root).as_posix() for test in matched)
     return sorted(selected)
+
+
+def _module_name(path: Path) -> str:
+    parts = list(path.with_suffix("").parts)
+    if parts[-1] == "__init__":
+        parts.pop()
+    return ".".join(parts)
+
+
+def _importers(root: Path) -> dict[str, set[str]]:
+    """{q50diag module: modules under q50diag/ that import it}."""
+    importers: dict[str, set[str]] = {}
+    for source in sorted((root / "q50diag").rglob("*.py")):
+        importer = _module_name(source.relative_to(root))
+        try:
+            tree = ast.parse(source.read_text(encoding="utf-8", errors="replace"))
+        except SyntaxError:
+            continue
+        for imported in _imported_modules(tree):
+            importers.setdefault(imported, set()).add(importer)
+    return importers
+
+
+def _imported_modules(tree: ast.AST) -> set[str]:
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module and not node.level:
+            names.add(node.module)
+            names.update(f"{node.module}.{alias.name}" for alias in node.names)
+    return {name for name in names if name == "q50diag" or name.startswith("q50diag.")}
+
+
+def _with_dependents(module: str, importers: dict[str, set[str]]) -> set[str]:
+    affected = {module}
+    queue = [module]
+    while queue:
+        for importer in importers.get(queue.pop(), ()):
+            if importer not in affected:
+                affected.add(importer)
+                queue.append(importer)
+    return affected
 
 
 def _names_module(text: str, module: str) -> bool:
