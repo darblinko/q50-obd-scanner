@@ -1,6 +1,6 @@
 import pytest
 
-from q50diag.core.transport import NegativeResponse, TransportError
+from q50diag.core.transport import NegativeResponse, NoResponse, TransportError
 from q50diag.protocol import obd2
 from q50diag.protocol.modules import module_by_name
 from q50diag.protocol.reader import read_parameter
@@ -161,3 +161,48 @@ def test_shrtft_ff_means_sensor_not_used_for_trim():
     text = obd2.MODE01_PIDS[0x15].decode(bytes.fromhex("0D FF"))
     assert "SHRTFT associated with O2S12: n/a" in text
     assert "0.065 V" in text
+
+
+class ModeReplies:
+    """request_functional stub: {mode: responses dict or exception}."""
+
+    def __init__(self, replies):
+        self.replies = replies
+
+    def request_functional(self, request):
+        reply = self.replies[request[0]]
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+
+
+def test_dtc_read_raises_when_every_mode_times_out():
+    silent = ModeReplies({3: NoResponse("NO DATA"), 7: NoResponse("NO DATA"), 10: NoResponse("NO DATA")})
+    with pytest.raises(NoResponse):
+        obd2.read_dtcs(silent)
+
+
+def test_dtc_read_raises_when_every_mode_is_rejected():
+    rejected = ModeReplies({3: NegativeResponse(3, 0x11), 7: NegativeResponse(7, 0x11), 10: NoResponse("NO DATA")})
+    with pytest.raises(NegativeResponse):
+        obd2.read_dtcs(rejected)
+
+
+def test_dtc_read_reports_unavailable_modes():
+    replies = ModeReplies({3: {0x7E8: b"\x43\x00"}, 7: {0x7E8: b"\x47\x00"}, 10: NegativeResponse(10, 0x12)})
+    dtcs, failures = obd2.read_dtcs_by_mode(replies)
+    assert dtcs == []
+    assert list(failures) == ["permanent"] and "NRC 0x12" in failures["permanent"]
+
+
+def test_dtc_read_keeps_valid_ecus_when_one_reply_is_malformed():
+    replies = ModeReplies(
+        {
+            3: {0x7E8: bytes.fromhex("43 01 01 71"), 0x7E9: bytes.fromhex("43 02 01 71")},
+            7: {0x7E8: b"\x47\x00"},
+            10: {0x7E8: b"\x4a\x00"},
+        }
+    )
+    dtcs, failures = obd2.read_dtcs_by_mode(replies)
+    assert [dtc.code for dtc in dtcs] == ["P0171"]
+    assert "TCM" in failures["stored"] and "Truncated" in failures["stored"]

@@ -161,7 +161,8 @@ class VehicleOverview:
 @dataclass(frozen=True)
 class DtcScanResult:
     dtcs: list[Dtc]
-    module_status: dict[str, str]  # module name -> "ok", "no response" or error text
+    # module name -> "ok", "no response", "partial: <modes that failed>", "malformed reply: ..." or error text
+    module_status: dict[str, str]
     freeze_frame: list[Reading] = field(default_factory=list)
     complete: bool = True  # False when cancelled part way
 
@@ -612,6 +613,9 @@ class Session(QObject):
         except (NoResponse, NegativeResponse, RequestBlocked) as exc:
             errors.append(f"{what}: {exc}")
             return None
+        except ValueError as exc:
+            errors.append(f"{what}: malformed reply: {exc}")
+            return None
 
     def _modules_to_scan(self) -> list[ModuleAddress]:
         """Discovered modules once discovery has run, else every known module on the selected bus."""
@@ -643,9 +647,10 @@ class Session(QObject):
 
     def _scan_obd_dtcs(self, transport: Transport, dtcs: list[Dtc], status: dict[str, str]) -> list[Reading]:
         try:
-            found = self.backend.read_dtcs(transport)
+            found, failures = self.backend.read_dtcs_by_mode(transport)
             dtcs.extend(found)
-            status["OBD-II"] = "ok"
+            partial = "; ".join(f"{kind}: {reason}" for kind, reason in failures.items())
+            status["OBD-II"] = f"partial: {partial}" if partial else "ok"
         except (NoResponse, NegativeResponse, RequestBlocked) as exc:
             status["OBD-II"] = str(exc)
             return []
@@ -663,6 +668,8 @@ class Session(QObject):
             return "no response"
         except (NegativeResponse, RequestBlocked) as exc:
             return str(exc)
+        except ValueError as exc:
+            return f"malformed reply: {exc}"
 
     def _do_clear_dtcs(self, module: ModuleAddress | None) -> None:
         transport = self._require()

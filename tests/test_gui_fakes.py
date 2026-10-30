@@ -148,6 +148,7 @@ class FakeBackend(Backend):
         self.transports: list[FakeTransport] = []
         self.cleared: list[str] = []
         self.reads = 0
+        self.dtc_mode_failures: dict[str, str] = {}
 
     def list_ports(self) -> list[PortInfo]:
         return [
@@ -174,6 +175,9 @@ class FakeBackend(Backend):
             Dtc("P0300", "Random/multiple cylinder misfire", "ECM", "stored"),
             Dtc("P0171", "System too lean bank 1", "ECM", "pending"),
         ]
+
+    def read_dtcs_by_mode(self, t):
+        return self.read_dtcs(t), dict(self.dtc_mode_failures)
 
     def clear_dtcs(self, t):
         t.request(0x7DF, 0x7E8, b"\x04", allow_clear=True)

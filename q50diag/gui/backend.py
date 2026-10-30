@@ -80,9 +80,14 @@ class Backend:
         return read_monitor_status(t)
 
     def read_dtcs(self, t: Transport) -> list[Dtc]:
-        from q50diag.protocol.obd2 import read_dtcs
+        return self.read_dtcs_by_mode(t)[0]
 
-        return self._localize(read_dtcs(t))
+    def read_dtcs_by_mode(self, t: Transport) -> tuple[list[Dtc], dict[str, str]]:
+        """OBD-II DTCs and {kind: reason} for the modes that failed (obd2.read_dtcs_by_mode)."""
+        from q50diag.protocol.obd2 import read_dtcs_by_mode
+
+        dtcs, failures = read_dtcs_by_mode(t)
+        return self._localize(dtcs), failures
 
     def clear_dtcs(self, t: Transport) -> None:
         from q50diag.protocol.obd2 import clear_dtcs

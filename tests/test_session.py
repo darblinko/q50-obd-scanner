@@ -3,7 +3,7 @@ import time
 
 import pytest
 
-from q50diag.core.transport import TransportError
+from q50diag.core.transport import NegativeResponse, TransportError
 from q50diag.core.types import ParameterDef
 from q50diag.gui.backend import SIMULATOR
 from q50diag.session import (
@@ -181,6 +181,28 @@ def test_scan_all_dtcs_covers_obd_and_modules(session):
     assert result.module_status["BCM"] == "no response"
     assert result.freeze_frame and result.complete
     assert got["progress"][-1][1] == got["progress"][-1][2]
+
+
+def test_scan_reports_partial_and_failed_dtc_reads(session, backend, monkeypatch):
+    backend.dtc_mode_failures = {"permanent": "negative response to 0x0A: NRC 0x12"}
+    original = backend.read_module_dtcs
+
+    def module_dtcs(t, m):
+        if m.name == "ABS":
+            raise NegativeResponse(0x18, 0x11)
+        if m.name == "EPS":
+            raise ValueError("Truncated KWP DTC response")
+        return original(t, m)
+
+    monkeypatch.setattr(backend, "read_module_dtcs", module_dtcs)
+    connect(session)
+    got = Collector(session, "dtcs_ready")
+    session.scan_all_dtcs()
+    assert wait_until(lambda: got["dtcs_ready"])
+    status = got["dtcs_ready"][0][0].module_status
+    assert status["OBD-II"] == "partial: permanent: negative response to 0x0A: NRC 0x12"
+    assert status["ABS"] == "negative response to 0x18: NRC 0x11"
+    assert status["EPS"] == "malformed reply: Truncated KWP DTC response"
 
 
 def test_clear_dtcs_uses_allow_clear_only_on_request(session, backend):

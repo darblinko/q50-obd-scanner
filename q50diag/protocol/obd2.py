@@ -221,18 +221,43 @@ def _dtcs_from_can(payload: bytes, mode: int, module: str, kind: str) -> list[Dt
     return result
 
 
-def read_dtcs(t: Transport) -> list[Dtc]:
-    result = []
-    for mode, kind in ((3, "stored"), (7, "pending"), (10, "permanent")):
+DTC_MODES = ((3, "stored"), (7, "pending"), (10, "permanent"))
+
+
+def read_dtcs_by_mode(t: Transport) -> tuple[list[Dtc], dict[str, str]]:
+    """DTCs from modes 03, 07 and 0A, and {kind: reason} for every mode that
+    failed or returned a malformed reply from some ECU. Raises when no mode
+    produced a usable reply, so a failed read is never an empty result."""
+    result: list[Dtc] = []
+    failures: dict[str, str] = {}
+    errors: list[Exception] = []
+    for mode, kind in DTC_MODES:
         try:
             responses = t.request_functional(bytes((mode,)))
         except (NoResponse, NegativeResponse) as error:
             LOGGER.debug("DTC mode %02X unavailable: %s", mode, error)
+            failures[kind] = str(error)
+            errors.append(error)
             continue
+        problems = []
         for can_id, payload in sorted(responses.items()):
             module = {0x7E8: "ECM", 0x7E9: "TCM"}.get(can_id, f"0x{can_id:03X}")
-            result.extend(_dtcs_from_can(payload, mode, module, kind))
-    return result
+            try:
+                result.extend(_dtcs_from_can(payload, mode, module, kind))
+            except TransportError as error:  # malformed reply from this ECU only
+                problems.append(f"{module}: {error}")
+        if problems:
+            failures[kind] = "; ".join(problems)
+        if len(problems) == len(responses):
+            errors.append(NoResponse(f"mode {mode:02X}: no usable reply ({failures[kind]})"))
+    if len(errors) == len(DTC_MODES):
+        rejection = next((error for error in errors if isinstance(error, NegativeResponse)), None)
+        raise rejection or NoResponse("No OBD-II DTC mode answered: " + "; ".join(map(str, errors)))
+    return result, failures
+
+
+def read_dtcs(t: Transport) -> list[Dtc]:
+    return read_dtcs_by_mode(t)[0]
 
 
 def clear_dtcs(t: Transport) -> None:

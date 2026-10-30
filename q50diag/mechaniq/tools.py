@@ -690,7 +690,13 @@ TOOL_SPECS: tuple[tuple[str, str, dict[str, Any]], ...] = (
         schema({"keys": KEY_LIST, "samples": {"type": "integer", "minimum": 0, "maximum": MAX_SAMPLES}}),
     ),
     ("get_dtcs", "Trouble codes from the last DTC scan and from module reads, without contacting the car.", schema()),
-    ("scan_dtcs", "Scan every module for trouble codes and return them. Takes up to two minutes.", schema()),
+    (
+        "scan_dtcs",
+        "Scan every module for trouble codes and return them. Takes up to two minutes. module_status is "
+        '"ok" only when the module answered; any other value (no response, partial, malformed reply, '
+        "negative response) means its codes are unknown or incomplete, not zero.",
+        schema(),
+    ),
     (
         "read_module",
         "Read identification, trouble codes and (optionally) parameters from one module, for example EPS, ABS or ECM.",

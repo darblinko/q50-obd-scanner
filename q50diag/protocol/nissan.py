@@ -68,20 +68,23 @@ def read_identification(t: Transport, module: ModuleAddress) -> dict[str, str]:
 
 
 def read_module_dtcs(t: Transport, module: ModuleAddress) -> list[Dtc]:
+    """DTCs from KWP 18, falling back to UDS 19. Raises when neither service
+    returns a decodable reply: NoResponse when both time out, otherwise the
+    rejection or decode error, so a failed read is never an empty result."""
     ensure_session(t, module)
     probes = ((b"\x18\x00\xff\x00", decode_kwp_dtc_response), (b"\x19\x02\xff", decode_uds_dtc_response))
-    no_answer = 0
+    failure: Exception | None = None
     for request, decode in probes:
         try:
             return decode(t.request(module.tx_id, module.rx_id, request), module.name)
         except NoResponse as error:
-            no_answer += 1
             LOGGER.debug("DTC probe %s on %s: %s", request.hex(), module.name, error)
         except (NegativeResponse, RequestBlocked, ValueError) as error:
             LOGGER.debug("DTC probe %s on %s: %s", request.hex(), module.name, error)
-    if no_answer == len(probes):
+            failure = error
+    if failure is None:
         raise NoResponse(f"{module.name} did not answer any DTC request")
-    return []
+    raise failure
 
 
 def clear_module_dtcs(t: Transport, module: ModuleAddress) -> None:

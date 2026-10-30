@@ -62,12 +62,11 @@ def test_identification_continues_after_failed_probes():
     assert result == {"Manufacturer part number": "PART. [50 41 52 54 00]"}
 
 
-def test_dtc_uds_fallback_and_unsupported():
+def test_dtc_uds_fallback():
     transport = ProbeTransport()
     transport.replies[b"\x19\x02\xff"] = bytes.fromhex("59 02 FF 56 04 00 01")
     result = nissan.read_module_dtcs(transport, EPS)
     assert result[0].code == "C1604-00" and result[0].kind == "current"
-    assert nissan.read_module_dtcs(ProbeTransport(), EPS) == []
 
 
 def test_clear_fallback_carries_confirmation():
@@ -134,3 +133,16 @@ def test_eps_fields_decode_q50_samples():
     assert fields["EPS.21.01.torque"].decode(bytes(loaded)) == -49
     with pytest.raises(ValueError):
         fields["EPS.21.01.motor"].decode(at_rest[:16])
+
+
+def test_dtc_read_raises_when_module_rejects_both_services():
+    with pytest.raises(NegativeResponse):
+        nissan.read_module_dtcs(ProbeTransport(), EPS)
+
+
+def test_dtc_read_raises_on_malformed_reply():
+    transport = ProbeTransport()
+    transport.replies[b"\x18\x00\xff\x00"] = b"\x58\x05"
+    transport.replies[b"\x19\x02\xff"] = NoResponse("timeout")
+    with pytest.raises(ValueError):
+        nissan.read_module_dtcs(transport, EPS)
