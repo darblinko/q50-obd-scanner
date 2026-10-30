@@ -54,6 +54,7 @@ NAVIGATION: tuple[tuple[str, tuple[type[Page], ...]], ...] = (
 TEXT_INPUTS = (QLineEdit, QTextEdit, QPlainTextEdit, QAbstractSpinBox)
 PAGE_ROLE = Qt.ItemDataRole.UserRole + 1
 MAX_PAGE_SHORTCUTS = 9  # Ctrl+1 to Ctrl+9
+SHUTDOWN_WAIT_S = 3.0  # worker stop wait on close before deferring the close
 
 
 class MarkEventFilter(QObject):
@@ -200,6 +201,7 @@ class MainWindow(QMainWindow):
 
     def _install_hotkeys(self) -> None:
         self._space_filter = MarkEventFilter(self)
+        self._close_deferred = False
         QApplication.instance().installEventFilter(self._space_filter)
         f9 = QShortcut(QKeySequence(Qt.Key.Key_F9), self)
         f9.setContext(Qt.ShortcutContext.ApplicationShortcut)
@@ -259,5 +261,12 @@ class MainWindow(QMainWindow):
             self.mechaniq.shutdown()
         if self.ctx.recorder.is_recording:
             self.ctx.stop_recording()
-        self.ctx.session.shutdown()
+        if not self.ctx.session.shutdown(SHUTDOWN_WAIT_S):
+            # Close again once the adapter call returns; the worker QThread must not be destroyed while running.
+            event.ignore()
+            if not self._close_deferred:
+                self._close_deferred = True
+                self.ctx.session.stopped.connect(self.close, Qt.ConnectionType.QueuedConnection)
+            self.ctx.notify("Closing after the current adapter operation finishes", "warn")
+            return
         super().closeEvent(event)

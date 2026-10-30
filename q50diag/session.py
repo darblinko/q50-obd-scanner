@@ -227,6 +227,7 @@ class Session(QObject):
     frames = Signal(object)  # list[CanFrame]
     poll_rate = Signal(float)  # module reads per second; one read can serve several parameters
     activity_changed = Signal()  # polling or monitor state changed
+    stopped = Signal()  # the worker thread has finished after shutdown()
 
     def __init__(self, backend: Backend | None = None, parent: QObject | None = None) -> None:
         super().__init__(parent)
@@ -252,6 +253,7 @@ class Session(QObject):
         self._rate_count = 0
         self._rate_started = time.monotonic()
         self._worker = _Worker(self)
+        self._worker.finished.connect(self.stopped)
         self._worker.start()
 
     # ------------------------------------------------------------------
@@ -363,12 +365,15 @@ class Session(QObject):
     def stop_steering_watch(self) -> None:
         self.stop_polling("steering")
 
-    def shutdown(self, timeout_s: float = 3.0) -> None:
+    def shutdown(self, timeout_s: float = 3.0) -> bool:
+        """Stop the worker. Returns False when it is still inside a blocking
+        transport call after timeout_s; the caller must keep the session alive
+        until `stopped` is emitted, because destroying a running QThread aborts."""
         self._shutdown.set()
         self._cancel.set()
         self._interrupt.set()
         self._queue.put(None)
-        self._worker.wait(int(timeout_s * 1000))
+        return self._worker.wait(int(timeout_s * 1000))
 
     # ------------------------------------------------------------------
     # Worker loop

@@ -149,3 +149,23 @@ def test_page_frame_scrolls_below_the_minimum_page_size(app):
     assert page.width() == PAGE_MIN_WIDTH and page.height() >= page.minimumSizeHint().height()
     assert frame.horizontalScrollBar().isVisible() and frame.verticalScrollBar().isVisible()
     frame.close()
+
+
+def test_close_waits_for_a_blocking_worker_instead_of_destroying_it(ctx, monkeypatch):
+    """Closing while the worker is inside a long adapter call keeps the window
+    (and its QThread) alive until the call returns, then closes."""
+    import threading
+
+    release = threading.Event()
+    ctx.session._submit("blocking adapter call", release.wait, 5.0)
+    win = MainWindow(ctx)
+    win.show()
+    assert wait_until(lambda: ctx.session._worker.isRunning(), 1)
+    monkeypatch.setattr("q50diag.gui.main_window.SHUTDOWN_WAIT_S", 0.05)
+
+    win.close()
+    assert win.isVisible(), "window closed while the worker was still running"
+    assert ctx.session._worker.isRunning()
+    release.set()
+    assert wait_until(lambda: not win.isVisible(), 5)
+    assert ctx.session._worker.isFinished()
