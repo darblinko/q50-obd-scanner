@@ -146,6 +146,25 @@ def test_recordings_lists_and_replays(ctx, tmp_path):
     page.grab()
 
 
+def test_recordings_refresh_counts_each_unchanged_file_once(ctx, tmp_path, monkeypatch):
+    from q50diag.gui.pages import recordings as recordings_page
+
+    path = _write_recording(tmp_path)
+    counted = []
+    real_count = recordings_page.count_rows
+    monkeypatch.setattr(recordings_page, "count_rows", lambda p: counted.append(p) or real_count(p))
+    page = RecordingsPage(ctx)
+    page.set_folder(tmp_path)
+    page.refresh()
+    page.refresh()
+    assert counted == [path]
+    with path.open("a") as handle:
+        handle.write("1.0,reading,x,x,x,1,,\n")
+    page.refresh()
+    assert counted == [path, path]
+    assert page.files.item(0, 3).text() == "43"
+
+
 def test_recordings_reports_unreadable_file(ctx, tmp_path):
     messages = []
     ctx.toast.connect(lambda text, level: messages.append(level))

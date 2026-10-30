@@ -93,6 +93,7 @@ class RecordingsPage(Page):
         super().__init__(ctx, parent)
         self.folder = ctx.recorder.folder if ctx.recorder.folder else DEFAULT_LOG_DIR
         self.recording: Recording | None = None
+        self._row_counts: dict[Path, tuple[int, int, int]] = {}  # path -> (size, mtime_ns, rows)
         self.source = ReplaySource()
         self._build_header()
         self._build_body()
@@ -194,7 +195,7 @@ class RecordingsPage(Page):
         try:
             stat = path.stat()
             size, started = format_size(stat.st_size), datetime.fromtimestamp(stat.st_mtime)
-            rows = str(count_rows(path))
+            rows = str(self._cached_rows(path, stat.st_size, stat.st_mtime_ns))
         except OSError:
             size, started, rows = "?", None, "?"
         name_item = table_item(path.name, mono=True)
@@ -207,6 +208,15 @@ class RecordingsPage(Page):
         self.files.setItem(row, 1, table_item(stamp, mono=True, color=theme.TEXT_DIM))
         self.files.setItem(row, 2, table_item(size, mono=True, align_right=True))
         self.files.setItem(row, 3, table_item(rows, mono=True, align_right=True))
+
+    def _cached_rows(self, path: Path, size: int, mtime_ns: int) -> int:
+        """Count a file again only when its size or modification time changed."""
+        cached = self._row_counts.get(path)
+        if cached and cached[:2] == (size, mtime_ns):
+            return cached[2]
+        rows = count_rows(path)
+        self._row_counts = {**self._row_counts, path: (size, mtime_ns, rows)}
+        return rows
 
     def _open_selected(self) -> None:
         rows = self.files.selectionModel().selectedRows()
