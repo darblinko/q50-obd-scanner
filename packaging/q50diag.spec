@@ -51,11 +51,13 @@ QT_EXCLUDES = [
 def source_datas():
     """(file, destination folder) for the plain-source copy under app_src/:
     the package, its tests, the Markdown docs the MechanIQ prompt cites,
-    pyproject.toml (pytest settings) and .gitignore (keeps logs/ out of git)."""
+    pyproject.toml (pytest settings), .gitignore (keeps logs/ out of git) and the
+    licence files, which must travel with the OBDb-derived tables."""
     files = [path for top in SOURCE_DIRS for path in (ROOT / top).rglob("*")
              if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"]
     files += list((ROOT / "docs").rglob("*.md"))
-    files += [ROOT / "pyproject.toml", ROOT / ".gitignore"]
+    files += [ROOT / "pyproject.toml", ROOT / ".gitignore", ROOT / "LICENSE", ROOT / "THIRD_PARTY_NOTICES.md"]
+    files += list((ROOT / "LICENSES").glob("*.txt"))
     return [(str(path), str(Path("app_src") / path.parent.relative_to(ROOT))) for path in sorted(files)]
 
 

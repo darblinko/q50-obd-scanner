@@ -23,7 +23,17 @@ from pathlib import Path
 from typing import NoReturn
 
 APP_DIR_NAME = "q50diag"
-SOURCE_ITEMS = ("q50diag", "tests", "docs", "pyproject.toml", ".gitignore", "BUILD_ID")
+SOURCE_ITEMS = (
+    "q50diag",
+    "tests",
+    "docs",
+    "pyproject.toml",
+    ".gitignore",
+    "BUILD_ID",
+    "LICENSE",
+    "LICENSES",
+    "THIRD_PARTY_NOTICES.md",
+)
 PYTEST_FLAG = "--run-pytest"
 WORKSPACE_ENV = "Q50DIAG_HOME"
 GIT_IDENTITY = ("-c", "user.name=q50diag", "-c", "user.email=q50diag@localhost")

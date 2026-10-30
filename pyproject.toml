@@ -4,8 +4,9 @@ version = "0.1.0"
 description = "Car diagnostic app for KWP2000, UDS and OBD-II over ELM327-compatible adapters, with an embedded Claude agent"
 readme = "README.md"
 requires-python = ">=3.11"
-license = "Apache-2.0"
-license-files = ["LICENSE"]
+# Code is Apache-2.0; the two OBDb-derived tables in q50diag/protocol/ are CC-BY-SA-4.0.
+license = "Apache-2.0 AND CC-BY-SA-4.0"
+license-files = ["LICENSE", "LICENSES/*", "THIRD_PARTY_NOTICES.md"]
 authors = [{ name = "Mitchell Foutz" }]
 dependencies = [
     "pyserial>=3.5",

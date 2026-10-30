@@ -178,4 +178,11 @@ No fault-code descriptions ship with this repository. The app reads them from a 
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
+The code is licensed under Apache-2.0 ([LICENSE](LICENSE)).
+
+Two data files are adapted from the [OBDb SAEJ1979](https://github.com/OBDb/SAEJ1979) signal set at commit 0669017 and are licensed under [CC-BY-SA-4.0](https://creativecommons.org/licenses/by-sa/4.0/) ([LICENSES/CC-BY-SA-4.0.txt](LICENSES/CC-BY-SA-4.0.txt)):
+
+- `q50diag/protocol/obd_pid_data.py`
+- `q50diag/protocol/obd_extended_data.py`
+
+Redistributed or modified copies of those two files stay under CC-BY-SA-4.0. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) gives the attribution and the changes made. The package metadata declares `Apache-2.0 AND CC-BY-SA-4.0`.
