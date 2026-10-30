@@ -51,7 +51,7 @@ class VehicleProfile:
         return next((m for m in self.modules if m.rx_id == rx_id), None)
 
     def modules_on_bus(self, bus: str) -> tuple[ModuleAddress, ...]:
-        return tuple(m for m in self.modules if m.bus == bus)
+        return tuple(m for m in self.modules if m.on_bus(bus))
 
 
 DEFAULT_VEHICLE_KEY = "q50_2017"

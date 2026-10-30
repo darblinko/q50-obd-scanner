@@ -10,7 +10,7 @@ The GT350R MagneRide damping module address is unknown and is omitted. The
 
 from __future__ import annotations
 
-from q50diag.core.types import CanFrame, ModuleAddress, ParameterDef, Value
+from q50diag.core.types import ANY_BUS, CanFrame, ModuleAddress, ParameterDef, Value
 from q50diag.data.dtc_descriptions import FORD_DESCRIPTIONS
 from q50diag.protocol import ford
 from q50diag.vehicles import VehicleProfile
@@ -19,13 +19,13 @@ UNSURE_BUS = "Bus placement uncertain: HS-CAN (pins 6/14) or MS-CAN (pins 3/11)"
 
 S550_MODULES: tuple[ModuleAddress, ...] = (
     ModuleAddress("PCM", 0x7E0, 0x7E8, "uds", "Powertrain", "Engine and 6R80 transmission; also OBD-II"),
-    ModuleAddress("ABS", 0x760, 0x768, "uds", "Chassis", "Anti-lock brakes / stability. " + UNSURE_BUS),
-    ModuleAddress("IPC", 0x720, 0x728, "uds", "Body", "Instrument cluster. " + UNSURE_BUS),
+    ModuleAddress("ABS", 0x760, 0x768, "uds", "Chassis", "Anti-lock brakes / stability. " + UNSURE_BUS, bus=ANY_BUS),
+    ModuleAddress("IPC", 0x720, 0x728, "uds", "Body", "Instrument cluster. " + UNSURE_BUS, bus=ANY_BUS),
     ModuleAddress("PSCM", 0x730, 0x738, "uds", "Chassis", "Electric power steering"),
     ModuleAddress("RCM", 0x737, 0x73F, "uds", "Chassis", "Restraints (air bags)"),
     ModuleAddress("BCM", 0x726, 0x72E, "uds", "Body", "Body control"),
     ModuleAddress("ACM", 0x727, 0x72F, "uds", "Body", "Audio control"),
-    ModuleAddress("APIM", 0x7D0, 0x7D8, "uds", "Body", "SYNC infotainment. " + UNSURE_BUS),
+    ModuleAddress("APIM", 0x7D0, 0x7D8, "uds", "Body", "SYNC infotainment. " + UNSURE_BUS, bus=ANY_BUS),
     ModuleAddress("HVAC", 0x733, 0x73B, "uds", "Body", "Climate control"),
 )
 SIM_MODULES = frozenset({"PCM", "ABS", "IPC", "BCM", "PSCM", "RCM", "APIM"})

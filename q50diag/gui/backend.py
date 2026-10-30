@@ -110,7 +110,7 @@ class Backend:
 
     def scan_modules(self) -> tuple[ModuleAddress, ...]:
         """Known modules on the selected bus: the ones scans and discovery address."""
-        return tuple(m for m in self.known_modules() if m.bus == self.bus)
+        return tuple(m for m in self.known_modules() if m.on_bus(self.bus))
 
     def obd_module_name(self) -> str:
         return self.vehicle.obd_module

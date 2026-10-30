@@ -26,7 +26,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 
 from q50diag.core.transport import NegativeResponse, NoResponse, Transport, TransportError, check_request_allowed
-from q50diag.core.types import AdapterInfo, CanFrame, ModuleAddress
+from q50diag.core.types import ANY_BUS, AdapterInfo, CanFrame, ModuleAddress
 from q50diag.transport import sim_ford
 from q50diag.transport.elm_parse import console_command
 from q50diag.vehicles import VehicleProfile, default_vehicle
@@ -62,6 +62,11 @@ class DriveState:
     stiff: bool
 
 
+def _simulated_bus(module: ModuleAddress) -> str:
+    """The simulator places modules with uncertain bus placement on HS-CAN."""
+    return "hs" if module.bus == ANY_BUS else module.bus
+
+
 def _byte(value: float) -> bytes:
     return bytes((max(0, min(255, round(value))),))
 
@@ -93,7 +98,9 @@ class SimulatedTransport(Transport):
         self.bus = bus
         self.vin = self.vehicle.sim_vin
         self.modules = tuple(
-            module for module in self.vehicle.modules if module.name in self.vehicle.sim_modules and module.bus == bus
+            module
+            for module in self.vehicle.modules
+            if module.name in self.vehicle.sim_modules and _simulated_bus(module) == bus
         )
         self._ford = self.vehicle.make == "Ford"
         self._engine = self.vehicle.obd_module

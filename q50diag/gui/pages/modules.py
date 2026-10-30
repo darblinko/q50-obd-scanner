@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from q50diag.core.types import Dtc, ModuleAddress, Reading
+from q50diag.core.types import ANY_BUS, Dtc, ModuleAddress, Reading
 from q50diag.gui import theme
 from q50diag.gui.context import AppContext
 from q50diag.gui.pages.base import Page
@@ -293,7 +293,12 @@ class ModulesPage(Page):
             self.notes_label.setText("Select a module in the list, or run discovery to find responders.")
             return
         self.name_label.setText(module.name)
-        bus = "" if module.bus == "hs" else f"   {module.bus.upper()} bus"
+        if module.bus == "hs":
+            bus = ""
+        elif module.bus == ANY_BUS:
+            bus = "   HS or MS bus (placement uncertain)"
+        else:
+            bus = f"   {module.bus.upper()} bus"
         self.ids_label.setText(f"{module_ids(module)}   {module.protocol}   {module.group}{bus}")
         self.notes_label.setText(module.notes)
         self._show_state(module)

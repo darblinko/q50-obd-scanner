@@ -155,3 +155,19 @@ def test_app_settings_tolerate_bad_files(tmp_path):
     assert load_app_settings(path) == AppSettings()
     path.write_text(json.dumps({"vehicle": "mustang_gt_2017", "bus": 5}))
     assert load_app_settings(path) == AppSettings(vehicle="mustang_gt_2017")
+
+
+@pytest.mark.parametrize("bus", ["hs", "ms"])
+def test_modules_with_uncertain_bus_are_probed_on_the_selected_bus(bus):
+    uncertain = {"ABS", "IPC", "APIM"}
+    assert {m.name for m in MUSTANG_GT.modules if m.bus == "any"} == uncertain
+    backend = Backend(vehicle=MUSTANG_GT, bus=bus)
+    assert uncertain <= {m.name for m in backend.scan_modules()}
+    transport = RecordingTransport()
+    backend.discover_modules(transport, None, None)
+    assert {0x720, 0x760, 0x7D0} <= set(transport.sent)
+
+
+def test_simulator_places_uncertain_modules_on_hs():
+    assert {"ABS", "IPC", "APIM"} <= {m.name for m in SimulatedTransport(vehicle=MUSTANG_GT, bus="hs").modules}
+    assert SimulatedTransport(vehicle=MUSTANG_GT, bus="ms").modules == ()

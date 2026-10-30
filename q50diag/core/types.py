@@ -27,6 +27,9 @@ class AdapterInfo:
     voltage: float | None  # ATRV, volts at the OBD port
 
 
+ANY_BUS = "any"  # bus placement uncertain: probed on whichever bus is selected
+
+
 @dataclass(frozen=True)
 class ModuleAddress:
     """A diagnostic endpoint on the CAN bus."""
@@ -37,7 +40,12 @@ class ModuleAddress:
     protocol: str  # "obd2", "kwp" (Nissan KWP2000 over CAN) or "uds"
     group: str  # "Powertrain", "Chassis", "Body", "Network", "Unknown"
     notes: str = ""
-    bus: str = "hs"  # adapter bus key: "hs" (pins 6/14) or "ms"/"ms500" (pins 3/11)
+    bus: str = "hs"  # adapter bus key: "hs" (pins 6/14), "ms"/"ms500" (pins 3/11) or ANY_BUS when uncertain
+
+    def on_bus(self, bus: str) -> bool:
+        """True when the module is addressed on `bus`: its own bus, or any bus
+        when its placement is uncertain."""
+        return self.bus in (bus, ANY_BUS)
 
 
 @dataclass(frozen=True)
