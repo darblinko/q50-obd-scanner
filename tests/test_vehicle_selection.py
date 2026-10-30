@@ -46,6 +46,25 @@ def test_set_vehicle_emits_resets_state_and_saves(idle_ctx, tmp_path):
     assert seen == [MUSTANG_GT]
 
 
+@pytest.mark.parametrize("change", ["vehicle", "bus"])
+def test_vehicle_or_bus_change_drops_measurements_markers_and_recording(idle_ctx, change):
+    from q50diag.core.types import Reading
+
+    cleared = []
+    idle_ctx.markers_cleared.connect(lambda: cleared.append(True))
+    idle_ctx.store.add_many([Reading("obd.01.0D", 42.0, "km/h", 1.0)])
+    idle_ctx.mark_event("before switch")
+    assert idle_ctx.start_recording() is not None
+    if change == "vehicle":
+        assert idle_ctx.set_vehicle(MUSTANG_GT)
+    else:
+        assert idle_ctx.set_adapter("obdlink_ex", "ms")
+    assert idle_ctx.store.latest("obd.01.0D") is None
+    assert idle_ctx.store.stats("obd.01.0D") is None
+    assert idle_ctx.markers == [] and cleared == [True]
+    assert not idle_ctx.recorder.is_recording
+
+
 def test_catalog_follows_the_vehicle(idle_ctx):
     q50_keys = {entry.key for entry in idle_ctx.catalog}
     assert any(key.startswith("EPS.21.01") for key in q50_keys)

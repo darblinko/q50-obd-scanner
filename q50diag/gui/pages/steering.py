@@ -257,6 +257,7 @@ class SteeringPage(Page):
         self.ctx.catalog_changed.connect(self._resolve_keys)
         self.ctx.pinned_changed.connect(self._update_chart_keys)
         self.ctx.marker_added.connect(self._on_marker)
+        self.ctx.markers_cleared.connect(lambda: self.charts.set_markers([]))
         self.ctx.module_state_changed.connect(self.refresh_eps)
         self.ctx.session.dtcs_ready.connect(lambda _result: self.refresh_eps())
         self.ctx.session.poll_rate.connect(self._on_poll_rate)

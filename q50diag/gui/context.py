@@ -161,7 +161,16 @@ class AppContext(QObject):
         return True
 
     def _forget_vehicle_state(self) -> None:
-        """Drop results that belong to the previous vehicle or bus."""
+        """Drop results that belong to the previous vehicle or bus.
+
+        Measurements share keys across vehicles (obd.01.0D is speed on every car), so the
+        series, statistics and markers are cleared and an active recording is closed.
+        """
+        if self.recorder.is_recording:
+            self.stop_recording()
+        self.store.clear()
+        self.markers = []
+        self.markers_cleared.emit()
         self.session.discovered = []
         self.overview = None
         self.dtc_result = None
