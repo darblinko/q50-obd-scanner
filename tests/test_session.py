@@ -301,7 +301,8 @@ def test_transport_error_marks_disconnected(session, backend):
 
     transport.request = broken
     session.start_polling("live", [(ECM, RPM)])
-    assert wait_until(lambda: not session.connected and got["connection_changed"])
+    # connection_changed is emitted before the error, so wait for both queued signals.
+    assert wait_until(lambda: not session.connected and got["connection_changed"] and got["error"])
     assert got["connection_changed"][-1] == (False, None)
     assert any("Connection lost" in e[0] for e in got["error"])
     assert session.polling_owners() == []
