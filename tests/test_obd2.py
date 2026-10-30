@@ -206,3 +206,24 @@ def test_dtc_read_keeps_valid_ecus_when_one_reply_is_malformed():
     dtcs, failures = obd2.read_dtcs_by_mode(replies)
     assert [dtc.code for dtc in dtcs] == ["P0171"]
     assert "TCM" in failures["stored"] and "Truncated" in failures["stored"]
+
+
+class FunctionalFailures:
+    """request_functional_with_failures stub: {mode: (responses, failures)}."""
+
+    def __init__(self, replies):
+        self.replies = replies
+
+    def request_functional(self, request):
+        return self.request_functional_with_failures(request)[0]
+
+    def request_functional_with_failures(self, request):
+        return self.replies[request[0]]
+
+
+def test_dtc_read_reports_ecu_rejection_alongside_zero_codes():
+    tcm_rejected = ({0x7E8: b"\x43\x00"}, {0x7E9: NegativeResponse(3, 0x22)})
+    replies = FunctionalFailures({3: tcm_rejected, 7: ({0x7E8: b"\x47\x00"}, {}), 10: ({0x7E8: b"\x4a\x00"}, {})})
+    dtcs, failures = obd2.read_dtcs_by_mode(replies)
+    assert dtcs == []
+    assert list(failures) == ["stored"] and failures["stored"].startswith("TCM: ") and "0x22" in failures["stored"]

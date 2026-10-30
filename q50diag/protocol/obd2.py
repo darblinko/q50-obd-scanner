@@ -224,31 +224,44 @@ def _dtcs_from_can(payload: bytes, mode: int, module: str, kind: str) -> list[Dt
 DTC_MODES = ((3, "stored"), (7, "pending"), (10, "permanent"))
 
 
+def _functional_with_failures(t: Transport, payload: bytes) -> tuple[dict[int, bytes], dict[int, Exception]]:
+    method = getattr(t, "request_functional_with_failures", None)
+    if method is None:
+        return t.request_functional(payload), {}
+    return method(payload)
+
+
+def _dtc_module_name(can_id: int) -> str:
+    return {0x7E8: "ECM", 0x7E9: "TCM"}.get(can_id, f"0x{can_id:03X}")
+
+
 def read_dtcs_by_mode(t: Transport) -> tuple[list[Dtc], dict[str, str]]:
     """DTCs from modes 03, 07 and 0A, and {kind: reason} for every mode that
-    failed or returned a malformed reply from some ECU. Raises when no mode
-    produced a usable reply, so a failed read is never an empty result."""
+    failed, or that some ECU rejected or answered with a malformed reply while
+    another ECU answered. Raises when no mode produced a usable reply, so a
+    failed read is never an empty result."""
     result: list[Dtc] = []
     failures: dict[str, str] = {}
     errors: list[Exception] = []
     for mode, kind in DTC_MODES:
         try:
-            responses = t.request_functional(bytes((mode,)))
+            responses, ecu_failures = _functional_with_failures(t, bytes((mode,)))
         except (NoResponse, NegativeResponse) as error:
             LOGGER.debug("DTC mode %02X unavailable: %s", mode, error)
             failures[kind] = str(error)
             errors.append(error)
             continue
-        problems = []
+        problems = [f"{_dtc_module_name(can_id)}: {error}" for can_id, error in sorted(ecu_failures.items())]
+        usable = 0
         for can_id, payload in sorted(responses.items()):
-            module = {0x7E8: "ECM", 0x7E9: "TCM"}.get(can_id, f"0x{can_id:03X}")
             try:
-                result.extend(_dtcs_from_can(payload, mode, module, kind))
+                result.extend(_dtcs_from_can(payload, mode, _dtc_module_name(can_id), kind))
+                usable += 1
             except TransportError as error:  # malformed reply from this ECU only
-                problems.append(f"{module}: {error}")
+                problems.append(f"{_dtc_module_name(can_id)}: {error}")
         if problems:
             failures[kind] = "; ".join(problems)
-        if len(problems) == len(responses):
+        if not usable:
             errors.append(NoResponse(f"mode {mode:02X}: no usable reply ({failures[kind]})"))
     if len(errors) == len(DTC_MODES):
         rejection = next((error for error in errors if isinstance(error, NegativeResponse)), None)
