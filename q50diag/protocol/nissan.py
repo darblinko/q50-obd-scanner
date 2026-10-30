@@ -71,7 +71,6 @@ def request(
 
 
 def read_identification(t: Transport, module: ModuleAddress) -> dict[str, str]:
-    ensure_session(t, module)
     probes = (
         ("Local identification", b"\x21\x83"),
         ("ECU identification", b"\x1a\x81"),
@@ -81,10 +80,10 @@ def read_identification(t: Transport, module: ModuleAddress) -> dict[str, str]:
         ("VIN", b"\x22\xf1\x90"),
     )
     result = {}
-    for label, request in probes:
+    for label, probe in probes:
         try:
-            reply = t.request(module.tx_id, module.rx_id, request, timeout_s=0.3)
-            expected = bytes((request[0] + 0x40,)) + request[1:]
+            reply = request(t, module, probe, timeout_s=0.3)
+            expected = bytes((probe[0] + 0x40,)) + probe[1:]
             if not reply.startswith(expected):
                 LOGGER.warning("Unexpected identification echo from %s: %s", module.name, reply.hex())
                 continue
@@ -100,16 +99,15 @@ def read_module_dtcs(t: Transport, module: ModuleAddress) -> list[Dtc]:
     """DTCs from KWP 18, falling back to UDS 19. Raises when neither service
     returns a decodable reply: NoResponse when both time out, otherwise the
     rejection or decode error, so a failed read is never an empty result."""
-    ensure_session(t, module)
     probes = ((b"\x18\x00\xff\x00", decode_kwp_dtc_response), (b"\x19\x02\xff", decode_uds_dtc_response))
     failure: Exception | None = None
-    for request, decode in probes:
+    for probe, decode in probes:
         try:
-            return decode(t.request(module.tx_id, module.rx_id, request), module.name)
+            return decode(request(t, module, probe), module.name)
         except NoResponse as error:
-            LOGGER.debug("DTC probe %s on %s: %s", request.hex(), module.name, error)
+            LOGGER.debug("DTC probe %s on %s: %s", probe.hex(), module.name, error)
         except (NegativeResponse, RequestBlocked, ValueError) as error:
-            LOGGER.debug("DTC probe %s on %s: %s", request.hex(), module.name, error)
+            LOGGER.debug("DTC probe %s on %s: %s", probe.hex(), module.name, error)
             failure = error
     if failure is None:
         raise NoResponse(f"{module.name} did not answer any DTC request")
@@ -117,17 +115,16 @@ def read_module_dtcs(t: Transport, module: ModuleAddress) -> list[Dtc]:
 
 
 def clear_module_dtcs(t: Transport, module: ModuleAddress) -> None:
-    ensure_session(t, module)
     last_error: Exception | None = None
-    for request in (b"\x14\xff\x00", b"\x14\xff\xff\xff"):
+    for probe in (b"\x14\xff\x00", b"\x14\xff\xff\xff"):
         try:
-            reply = t.request(module.tx_id, module.rx_id, request, allow_clear=True)
+            reply = request(t, module, probe, allow_clear=True)
             if not reply or reply[0] != 0x54:
                 raise ValueError(f"Unexpected DTC clear response from {module.name}: {reply.hex()}")
             return
         except (NoResponse, NegativeResponse) as error:
             last_error = error
-            LOGGER.debug("DTC clear %s on %s: %s", request.hex(), module.name, error)
+            LOGGER.debug("DTC clear %s on %s: %s", probe.hex(), module.name, error)
     if last_error is not None:
         raise last_error
 

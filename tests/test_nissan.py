@@ -146,3 +146,50 @@ def test_dtc_read_raises_on_malformed_reply():
     transport.replies[b"\x19\x02\xff"] = NoResponse("timeout")
     with pytest.raises(ValueError):
         nissan.read_module_dtcs(transport, EPS)
+
+
+class ExpiringSession(ProbeTransport):
+    """Answers reads only after 10 C0; `expire()` drops back to the default session (NRC 80)."""
+
+    def __init__(self, reads):
+        super().__init__()
+        self.reads = reads
+        self.in_session = False
+        self.replies[b"\x10\xc0"] = b"\x50\xc0"
+
+    def expire(self):
+        self.in_session = False
+
+    def request(self, tx, rx, payload, **kwargs):
+        if payload == b"\x10\xc0":
+            self.in_session = True
+        elif payload in self.reads:
+            self.requests.append((payload, kwargs))
+            if not self.in_session:
+                raise NegativeResponse(payload[0], 0x80)
+            return self.reads[payload]
+        return super().request(tx, rx, payload, **kwargs)
+
+
+@pytest.mark.parametrize(
+    ("operation", "reads", "check"),
+    [
+        (
+            nissan.read_identification,
+            {b"\x21\x83": b"\x61\x83ID"},
+            lambda result: result["Local identification"].startswith("ID"),
+        ),
+        (
+            nissan.read_module_dtcs,
+            {b"\x18\x00\xff\x00": bytes.fromhex("58 01 56 04 E0")},
+            lambda result: result[0].code.startswith("C1604"),
+        ),
+        (nissan.clear_module_dtcs, {b"\x14\xff\x00": b"\x54"}, lambda result: result is None),
+    ],
+)
+def test_operations_re_enter_an_expired_session(operation, reads, check):
+    nissan.reset_sessions()
+    transport = ExpiringSession(reads)
+    assert check(operation(transport, EPS))
+    transport.expire()
+    assert check(operation(transport, EPS))
