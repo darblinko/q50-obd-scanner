@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from q50diag.core.types import ModuleAddress, ParameterDef
 from q50diag.data.dtc_descriptions import NISSAN_DESCRIPTIONS
 from q50diag.protocol import nissan
 from q50diag.protocol.broadcast import BROADCAST_SIGNALS, decode_frame
@@ -24,6 +25,12 @@ PROMPT_NOTES = """
 - Findings so far: docs/q50-findings-2026-10-17.md. Background research: docs/research/.
 """.strip()
 
+
+def q50_parameters(module: ModuleAddress) -> list[ParameterDef]:
+    # Resolved at call time so a hot reload of nissan takes effect without a restart.
+    return nissan.module_parameters(module)
+
+
 Q50 = VehicleProfile(
     key="q50_2017",
     name="2017 Infiniti Q50 3.0t",
@@ -33,7 +40,7 @@ Q50 = VehicleProfile(
     modules=KNOWN_MODULES,
     obd_module="ECM",
     diag=nissan,
-    module_parameters=nissan.module_parameters,
+    module_parameters=q50_parameters,
     broadcast_signals=BROADCAST_SIGNALS,
     decode_frame=decode_frame,
     discovery_probes=KNOWN_PROBES,

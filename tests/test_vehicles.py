@@ -42,6 +42,17 @@ def test_q50_profile_wraps_existing_tables_unchanged():
     assert Q50.module_for_response_id(0x762).name == "EPS"
 
 
+@pytest.mark.parametrize("vehicle", VEHICLES, ids=lambda v: v.key)
+def test_profile_parameters_follow_a_reloaded_protocol_module(vehicle, monkeypatch):
+    """Hot reload replaces protocol functions; a profile must not keep the old one."""
+    marker = []
+    target = nissan if vehicle.diag is nissan else ford
+    name = "module_parameters" if target is nissan else "pcm_parameters"
+    monkeypatch.setattr(target, name, lambda *args, **kwargs: marker)
+    module = vehicle.module(vehicle.obd_module)
+    assert vehicle.module_parameters(module) is marker
+
+
 def test_mustang_modules_respond_at_request_plus_8():
     names = [m.name for m in S550_MODULES]
     assert names == ["PCM", "ABS", "IPC", "PSCM", "RCM", "BCM", "ACM", "APIM", "HVAC"]
