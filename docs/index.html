@@ -23,7 +23,7 @@
       <p class="lede">A desktop diagnostic app that reads every answering module of a car over KWP2000, UDS and OBD-II, with an embedded Claude agent that gets 18 MCP tools and no serial port. For automotive engineers who want manufacturer-level reads from an ELM327-class adapter, and AI engineers who want a worked example of an agent bounded by a tool layer and a PreToolUse hook.</p>
       <dl class="record">
         <div><dt>Repository</dt><dd>darblinko/q50-obd-scanner</dd></div>
-        <div><dt>Revision</dt><dd><code>074d490</code></dd></div>
+        <div><dt>Revision</dt><dd><code>a900b5e</code></dd></div>
         <div><dt>Measured</dt><dd>2026-10-30 (tests), 2026-10-17 (field session)</dd></div>
         <div><dt>License</dt><dd>Apache-2.0; two OBDb-derived PID tables CC-BY-SA-4.0</dd></div>
       </dl>
@@ -78,7 +78,7 @@ flowchart TB
         <p>Guard cases: <code>uv run pytest --collect-only -q tests/test_mechaniq_guard.py</code></p>
         <p>Blocked payload list: <code>BLOCKED</code> in <code>tests/test_backend_integration.py</code>.</p>
       </aside>
-      <p>Safety tests in the suite at revision 074d490, all passing. The guard cases include allowed commands as controls, so a guard that denies everything would fail them.</p>
+      <p>Safety tests in the suite at revision a900b5e, all passing. The guard cases include allowed commands as controls, so a guard that denies everything would fail them.</p>
       <figure class="chart" data-chart="guard-cases"></figure>
       <figure class="chart" data-chart="gate-cases"></figure>
     </section>
@@ -110,7 +110,7 @@ cd obd-scanner</code></pre></li>
   </main>
 
   <footer>
-    obd-scanner. Apache-2.0, with two CC-BY-SA-4.0 data files (THIRD_PARTY_NOTICES.md). Figures generated from <code>docs/data.json</code> at <code>074d490</code>.
+    obd-scanner. Apache-2.0, with two CC-BY-SA-4.0 data files (THIRD_PARTY_NOTICES.md). Figures generated from <code>docs/data.json</code> at <code>a900b5e</code>.
   </footer>
 
   <script src="charts.js" defer></script>
