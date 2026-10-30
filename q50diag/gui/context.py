@@ -45,6 +45,7 @@ class AppContext(QObject):
     module_state_changed = Signal()  # responding map or discovered list changed
     navigate = Signal(str)  # page title to show
     vehicle_changed = Signal(object)  # VehicleProfile
+    vehicle_state_cleared = Signal()  # results of the previous vehicle or bus were dropped
     adapter_changed = Signal(str, str)  # adapter key, bus key
 
     def __init__(
@@ -178,6 +179,7 @@ class AppContext(QObject):
         self.module_reports = {}
         self.module_responding = {}
         self.rebuild_catalog()
+        self.vehicle_state_cleared.emit()
         self.module_state_changed.emit()
 
     def _save_settings(self) -> None:

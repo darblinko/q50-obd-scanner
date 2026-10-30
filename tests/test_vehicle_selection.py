@@ -11,7 +11,9 @@ from q50diag.gui.app_settings import load_app_settings
 from q50diag.gui.backend import SIMULATOR, Backend
 from q50diag.gui.pages.connect import ConnectPage
 from q50diag.gui.pages.module_explorer import ExplorerTab
+from q50diag.gui.pages.overview import OverviewPage
 from q50diag.gui.pages.steering import SteeringPage
+from q50diag.gui.pages.trouble_codes import TroubleCodesPage
 from q50diag.gui.widgets.top_bar import TopBar
 from q50diag.transport.adapters import ADAPTERS
 from q50diag.vehicles.mustang import MUSTANG_GT, MUSTANG_GT350R
@@ -163,3 +165,32 @@ def test_explorer_services_follow_the_vehicle(idle_ctx):
     assert services == [0x22]
     assert (tab.start_edit.text(), tab.end_edit.text()) == ("F400", "F4FF")
     assert not tab.pin_button.isVisibleTo(tab)
+
+
+def _q50_results(ctx):
+    from q50diag.core.types import Dtc, MonitorStatus
+    from q50diag.session import DtcScanResult, VehicleOverview
+
+    overview = VehicleOverview(None, "JN1SAMPLE", MonitorStatus(True, 1, {"Misfire": "complete"}), 12.6)
+    result = DtcScanResult([Dtc("C1A00", "", "ABS", "current")], {"OBD-II": "ok", "ABS": "ok"})
+    ctx.session.overview_ready.emit(overview)
+    ctx.session.dtcs_ready.emit(result)
+
+
+@pytest.mark.parametrize("switch", ["vehicle", "bus"])
+def test_trouble_codes_and_overview_drop_previous_results(idle_ctx, switch):
+    codes = TroubleCodesPage(idle_ctx)
+    overview = OverviewPage(idle_ctx)
+    _q50_results(idle_ctx)
+    assert codes.table.rowCount() == 1
+    assert codes.clear_target.findData("ABS") >= 0
+    assert overview.monitor_table.rowCount() == 1 and overview.dtc_card.value_label.text() == "1"
+    if switch == "vehicle":
+        assert idle_ctx.set_vehicle(MUSTANG_GT)
+    else:
+        assert idle_ctx.set_adapter(idle_ctx.backend.adapter_key, "ms")
+    assert codes.table.rowCount() == 0 and codes.visible_dtcs() == []
+    assert [codes.clear_target.itemData(i) for i in range(codes.clear_target.count())] == ["OBD-II"]
+    assert codes.summary.text() == "No scan yet"
+    assert overview.monitor_table.rowCount() == 0 and overview.module_table.rowCount() == 0
+    assert overview.dtc_card.value_label.text() == "--" and overview.mil_card.value_label.text() == "--"

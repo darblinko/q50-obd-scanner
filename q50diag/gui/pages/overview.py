@@ -99,6 +99,17 @@ class OverviewPage(Page):
         session.busy_changed.connect(self._on_busy)
         self.ctx.module_state_changed.connect(self._show_modules)
         self.ctx.vehicle_changed.connect(lambda _vehicle: self.vin_card.set_value("--", "idle"))
+        self.ctx.vehicle_state_cleared.connect(self._reset_results)
+
+    def _reset_results(self) -> None:
+        """Drop the previous vehicle's or bus's overview, readiness and DTC results."""
+        self.vin_card.set_value("--", "idle", "Read with mode 09")
+        self._show_monitor(None)
+        self.mil_card.set_value("--", "idle", "Mode 01 PID 01")
+        self.voltage_card.set_value("--", "idle", "ATRV at the OBD port")
+        self.modules_card.set_value("--", "idle", "Run a full scan to discover modules")
+        self.dtc_card.set_value("--", "idle", "Run a full scan to read every module")
+        self.module_table.setRowCount(0)
 
     def _refresh_all(self) -> None:
         self._on_connection(self.ctx.session.connected, self.ctx.session.adapter)

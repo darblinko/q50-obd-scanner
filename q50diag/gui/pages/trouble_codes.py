@@ -120,6 +120,7 @@ class TroubleCodesPage(Page):
         session.dtcs_cleared.connect(self._on_cleared)
         session.busy_changed.connect(self._on_busy)
         session.connection_changed.connect(self._on_connection)
+        self.ctx.vehicle_state_cleared.connect(self._reset)
 
     # Data ---------------------------------------------------------------
     def _on_dtcs(self, result: DtcScanResult) -> None:
@@ -134,6 +135,12 @@ class TroubleCodesPage(Page):
         if not result.complete:
             text += ", scan cancelled"
         self.summary.setText(text)
+
+    def _reset(self) -> None:
+        """Drop the previous vehicle's or bus's codes and clear targets."""
+        self._on_dtcs(DtcScanResult([], {}))
+        self._result = None
+        self.summary.setText("No scan yet")
 
     def _refresh_module_filter(self, result: DtcScanResult) -> None:
         current = self.module_filter.currentText()
