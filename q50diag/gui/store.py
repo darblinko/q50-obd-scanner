@@ -54,12 +54,14 @@ class SeriesStore:
         self._times: dict[str, deque[float]] = {}
         self._values: dict[str, deque[float]] = {}
         self._latest: dict[str, Reading] = {}
+        self._attempts: dict[str, Reading] = {}  # newest reading per key, failed or not
         self._stats: dict[str, KeyStats] = {}
         self.version = 0
 
     def add(self, reading: Reading) -> None:
         stats = self._stats.setdefault(reading.key, KeyStats())
         self.version += 1
+        self._attempts[reading.key] = reading
         if reading.error:
             stats.errors += 1
             stats.last_error = reading.error
@@ -91,7 +93,12 @@ class SeriesStore:
         return key in self._times
 
     def latest(self, key: str) -> Reading | None:
+        """The newest successful reading, or the first error when none succeeded."""
         return self._latest.get(key)
+
+    def latest_attempt(self, key: str) -> Reading | None:
+        """The newest reading, including a failed one."""
+        return self._attempts.get(key)
 
     def stats(self, key: str) -> KeyStats | None:
         return self._stats.get(key)
@@ -129,5 +136,6 @@ class SeriesStore:
         self._times.clear()
         self._values.clear()
         self._latest.clear()
+        self._attempts.clear()
         self._stats.clear()
         self.version += 1

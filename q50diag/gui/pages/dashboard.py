@@ -350,16 +350,19 @@ class DashboardPage(Page):
 
     def _show(self, index: int) -> None:
         key = self.slots()[index].key
-        latest = self.ctx.store.latest(key)
-        if latest is None:
+        attempt = self.ctx.store.latest_attempt(key)
+        if attempt is None:
             return
         stats = self.ctx.store.stats(key)
         minimum = stats.minimum if stats else None
         maximum = stats.maximum if stats else None
-        if latest.error and (stats is None or stats.count == 0):
-            self.gauges[index].set_reading(None, minimum, maximum, error=latest.error)
+        if attempt.error:
+            # The needle stays at the last good value; the readout shows the failure.
+            latest = self.ctx.store.latest(key)
+            last_good = None if latest is None or latest.error else latest.value
+            self.gauges[index].set_reading(last_good, minimum, maximum, error=attempt.error)
         else:
-            self.gauges[index].set_reading(latest.value, minimum, maximum)
+            self.gauges[index].set_reading(attempt.value, minimum, maximum)
 
     def _animate(self) -> None:
         dt = min(self._frame_clock.restart() / 1000.0, MAX_FRAME_S)

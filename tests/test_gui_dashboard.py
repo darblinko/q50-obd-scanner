@@ -190,6 +190,19 @@ def test_error_reading_shows_error(page, ctx):
     assert page.gauges[1].readout_text() == "--"
 
 
+def test_failure_after_success_shows_error_and_recovers(page, ctx):
+    ctx.store.add(Reading("obd.01.0C", 4000, "rpm", time.time()))
+    page.refresh_values()
+    assert page.gauges[0].readout_text() == "4000" and not page.gauges[0].has_error
+    ctx.store.add(Reading("obd.01.0C", None, "rpm", time.time(), error="No response"))
+    page.refresh_values()
+    assert page.gauges[0].has_error and page.gauges[0].readout_text() == "error"
+    assert page.gauges[0].toolTip() == "No response"
+    ctx.store.add(Reading("obd.01.0C", 1200, "rpm", time.time()))
+    page.refresh_values()
+    assert not page.gauges[0].has_error and page.gauges[0].readout_text() == "1200"
+
+
 def test_needles_animate_then_timer_stops_and_stops_when_hidden(page, ctx):
     page.show()
     ctx.store.add(Reading("obd.01.0C", 4000, "rpm", time.time()))
