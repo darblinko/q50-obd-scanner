@@ -1,11 +1,16 @@
 """Hidden smoke run for `--smoke-seconds N [--screenshot-dir DIR]`.
 
-Drives the main window through a scripted session (full scan, bus monitor,
-live polling, steering watch with markers, explorer scan, console), then
-optionally saves a screenshot of every page and quits. Used to prove the GUI
-works end to end against the simulator; not part of normal operation. For a
-vehicle without a Steering page the steering watch is skipped and the
-explorer scans the engine module with the vehicle's first explorer service."""
+Drives the main window through a scripted session (full scan, DTC scan, bus
+monitor, live polling, steering watch with markers, explorer scan, console),
+then optionally saves a screenshot of every page and quits. Used to prove the
+GUI works end to end against the simulator; not part of normal operation. For
+a vehicle without a Steering page the steering watch is skipped and the
+explorer scans the engine module with the vehicle's first explorer service.
+
+The run fails on any session error and on a missing milestone: an overview,
+a successful vehicle reading (the adapter voltage does not count), a complete
+DTC scan in which a module answered, a complete explorer scan with results,
+a console reply and, with a Steering page, a recording made during the run."""
 
 from __future__ import annotations
 
@@ -19,10 +24,11 @@ from PySide6.QtCore import QObject, QTimer
 from PySide6.QtWidgets import QApplication
 
 from q50diag.recorder import list_recordings
+from q50diag.session import VOLTAGE_KEY
 
 log = logging.getLogger(__name__)
 
-SESSION_MILESTONES = frozenset({"overview", "live reading", "explorer scan", "console reply"})
+SESSION_MILESTONES = frozenset({"overview", "live reading", "trouble codes", "explorer scan", "console reply"})
 LIVE_KEYS = ("adapter.voltage", "obd.01.0C", "obd.01.0D", "bcast.300.assist_raw", "PCM.22.F405")
 
 
@@ -36,6 +42,7 @@ class SmokeRun(QObject):
         self.started = time.monotonic()
         self.failures: list[str] = []
         self.seen: set[str] = set()
+        self._recordings_before = set(list_recordings(self.page("Recordings").folder))
         self._wire_milestones()
         steps: list[tuple[float, Callable[[], None]]] = [
             (0.10, self._full_scan),
@@ -54,7 +61,8 @@ class SmokeRun(QObject):
         session.error.connect(self._on_error)
         session.overview_ready.connect(lambda _overview: self.seen.add("overview"))
         session.readings.connect(self._on_readings)
-        session.identifiers_scanned.connect(lambda _scan: self.seen.add("explorer scan"))
+        session.dtcs_ready.connect(self._on_dtcs)
+        session.identifiers_scanned.connect(self._on_identifiers)
         session.raw_response.connect(lambda _request, _response: self.seen.add("console reply"))
 
     def _on_error(self, text: str) -> None:
@@ -64,11 +72,19 @@ class SmokeRun(QObject):
             self.failures.append(failure)
 
     def _on_readings(self, readings) -> None:
-        if any(not reading.error for reading in readings):
+        if any(not reading.error and reading.key != VOLTAGE_KEY for reading in readings):
             self.seen.add("live reading")
 
+    def _on_dtcs(self, result) -> None:
+        """The full scan is cancelled by the bus monitor step; the separate DTC scan must complete."""
+        if result.complete and any(status == "ok" for status in result.module_status.values()):
+            self.seen.add("trouble codes")
+
+    def _on_identifiers(self, scan) -> None:
+        if scan.complete and scan.results:
+            self.seen.add("explorer scan")
+
     def _check_milestones(self) -> None:
-        """The bus monitor step cancels the full scan, so trouble codes are not required."""
         if not self.ctx.session.connected:
             self.failures.append("not connected at the end of the run")
         for milestone in sorted(SESSION_MILESTONES - self.seen):
@@ -94,6 +110,7 @@ class SmokeRun(QObject):
 
     def _bus_monitor(self) -> None:
         self.ctx.session.cancel()  # cut a long discovery short so the rest can run
+        self.ctx.session.scan_all_dtcs()
         self.window.show_page("Bus Monitor")
         self.ctx.session.start_bus_monitor(None)
 
@@ -137,7 +154,8 @@ class SmokeRun(QObject):
         saved = list_recordings(recordings.folder)
         if saved:
             recordings.open_recording(saved[0])
-        if self.ctx.vehicle.has_steering_page and not saved:  # the steering watch records
+        produced = [path for path in saved if path not in self._recordings_before]
+        if self.ctx.vehicle.has_steering_page and not produced:  # the steering watch records
             self.failures.append("missing milestone: recording")
         if self.screenshot_dir:
             self.screenshot_dir.mkdir(parents=True, exist_ok=True)
