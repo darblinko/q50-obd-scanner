@@ -3,7 +3,7 @@ name = "q50diag"
 version = "0.1.0"
 description = "Car diagnostic app for KWP2000, UDS and OBD-II over ELM327-compatible adapters, with an embedded Claude agent"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 # Code is Apache-2.0; the two OBDb-derived tables in q50diag/protocol/ are CC-BY-SA-4.0.
 license = "Apache-2.0 AND CC-BY-SA-4.0"
 license-files = ["LICENSE", "LICENSES/*", "THIRD_PARTY_NOTICES.md"]
@@ -42,7 +42,7 @@ constraint-dependencies = ["cryptography<49; sys_platform == 'darwin' and platfo
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]

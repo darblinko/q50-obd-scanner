@@ -130,7 +130,7 @@ The 10 payloads in `BLOCKED` (tests/test_backend_integration.py) are ECU reset, 
 
 ## Quickstart
 
-Requirements: Python 3.11 or newer installed on the system (pyproject.toml sets `python-preference = "only-system"`; `.python-version` pins 3.12) and [uv](https://docs.astral.sh/uv/).
+Requirements: Python 3.12 installed on the system and [uv](https://docs.astral.sh/uv/). `.python-version` pins 3.12, the version CI tests, and pyproject.toml sets `python-preference = "only-system"`, so uv does not download one. To use another installed version of 3.12 or newer (only 3.12 is tested in CI), pass it explicitly: `uv sync --frozen --python 3.13`. Python 3.11 is not supported: with PySide6 6.12.0 the test suite aborts in a signal emit with "Fatal Python error: bool_dealloc" (tests/test_session.py, 2026-10-30).
 
 ```bash
 git clone https://github.com/darblinko/q50-obd-scanner
