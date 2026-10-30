@@ -3,13 +3,19 @@
 MechanIQ runs with permission prompts off, so this hook is the hard boundary.
 It denies file writes outside the project, destructive or remote git
 commands, Bash that opens a serial device (the app owns the adapter port),
-and any access to `.env` files or the MechanIQ settings file (it may hold an
-API key). Each denial tells the agent what to do instead.
+any access to `.env` files or the MechanIQ settings file (it may hold an
+API key), and Bash that prints the Anthropic credentials from the
+environment. Each denial tells the agent what to do instead.
 
 Bash commands are split into shell segments with shlex so quoted text such as
-a commit message is not mistaken for a command. Redirect and tee targets are
-checked like file writes. The Bash checks are a guard against mistakes, not a
-sandbox: a script file can still do anything its interpreter allows."""
+a commit message is not mistaken for a command. Leading VAR=value assignments
+and wrappers such as env, nohup and timeout are skipped to find the command a
+segment runs. Redirect and tee targets, file operands of cp, mv, rm and
+similar commands, and dd of= are checked like file writes, relative to the
+directory the preceding `cd` segments select. The Bash checks are a guard
+against mistakes, not a sandbox: a script file can still do anything its
+interpreter allows, and the credentials stay in the environment of every
+command the agent runs."""
 
 from __future__ import annotations
 
@@ -18,6 +24,8 @@ import shlex
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
+
+from q50diag.mechaniq.settings import AUTH_ENV_KEYS
 
 WRITE_TOOLS = {"Write": "file_path", "Edit": "file_path", "MultiEdit": "file_path", "NotebookEdit": "notebook_path"}
 READ_TOOLS = {"Read": "file_path", "Grep": "path", "Glob": "path"}
@@ -31,10 +39,44 @@ HARMLESS_TARGETS = {"/dev/null", "/dev/stdout", "/dev/stderr"}
 WRITE_REDIRECTS = {">", ">>", ">|", "&>", "&>>", ">&"}
 SEPARATOR_CHARS = set(";|&()\n")
 GIT_OPTIONS_WITH_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace"}
+INPUT_REDIRECTS = {"<", "<<", "<<<"}
+ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+# Commands that run their arguments as another command, with their options that take a value.
+WRAPPERS = {
+    "env": {"-u", "--unset", "-C", "--chdir", "-S", "--split-string"},
+    "command": set(),
+    "exec": {"-a"},
+    "nohup": set(),
+    "time": {"-f", "-o"},
+    "nice": {"-n", "--adjustment"},
+    "sudo": {"-u", "-g", "-C", "-D", "-h", "-p", "-U"},
+    "doas": {"-u", "-C"},
+    "timeout": {"-s", "-k", "--signal", "--kill-after"},
+    "stdbuf": {"-i", "-o", "-e"},
+    "xargs": {"-I", "-i", "-n", "-L", "-l", "-P", "-d", "-s", "-E", "-e", "-a"},
+}
+# File commands whose last operand (or -t directory) is the destination.
+DESTINATION_COMMANDS = {"cp", "mv", "install", "ln", "rsync"}
+# File commands that modify every operand.
+OPERAND_COMMANDS = {"touch", "mkdir", "rm", "rmdir", "truncate"}
+TARGET_DIRECTORY_OPTIONS = {"-t", "--target-directory"}
+FILE_OPTIONS_WITH_VALUE = {
+    "cp": {"-S", "--suffix"},
+    "mv": {"-S", "--suffix"},
+    "ln": {"-S", "--suffix"},
+    "install": {"-m", "-o", "-g", "-S", "--mode", "--owner", "--group", "--suffix"},
+    "rsync": {"-e", "--rsh", "--exclude", "--include", "--filter", "-f"},
+    "touch": {"-d", "-t", "-r", "--date", "--reference"},
+    "mkdir": {"-m", "--mode"},
+    "truncate": {"-s", "-r", "--size", "--reference"},
+}
+# Builtins that list every exported variable when given only options.
+ENV_LISTING_BUILTINS = {"export", "declare", "typeset", "compgen"}
 
 SERIAL_PATTERNS = (
     re.compile(r"/dev/tty"),
     re.compile(r"/dev/serial"),
+    re.compile(r"/dev/cu\."),
     re.compile(r"\bCOM\d+\b", re.IGNORECASE),
     re.compile(r"\bserial\.Serial\s*\("),
     re.compile(r"\bserial_for_url\b"),
@@ -42,6 +84,7 @@ SERIAL_PATTERNS = (
 )
 ENV_FILE = re.compile(r"(?:^|[\s/'\"=<>(:])\.env\b")
 # Fallback when a command cannot be tokenized (unbalanced quotes).
+ENV_SECRET = re.compile("|".join([*AUTH_ENV_KEYS, r"/proc/\S*/environ"]))
 RAW_GIT_PUSH = re.compile(r"\bgit\b[^;&|\n]*\bpush\b")
 RAW_GIT_DISCARD = re.compile(r"\bgit\b[^;&|\n]*\b(?:clean\b|reset\b[^;&|\n]*--hard\b)")
 
@@ -57,6 +100,11 @@ DISCARD_MESSAGE = (
     "git reset --hard and git clean are blocked because they discard work. "
     "Use the undo_change tool to revert a MechanIQ change, or git restore <file> "
     "for one file you edited in this turn."
+)
+ENV_SECRET_MESSAGE = (
+    "Reading ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN or the whole environment is blocked because it "
+    "holds credentials. Use printenv NAME for one non-secret variable; to search code for these names, "
+    "use the Grep tool."
 )
 SERIAL_MESSAGE = (
     "Bash may not open a serial device or adapter port: the q50diag app owns the "
@@ -103,6 +151,90 @@ def shell_segments(command: str) -> list[list[str]]:
     return [segment for segment in segments if segment]
 
 
+def without_redirects(segment: list[str]) -> list[str]:
+    """`segment` with redirect operators, their targets and their fd numbers removed."""
+    kept: list[str] = []
+    skip_next = False
+    for token in segment:
+        if skip_next:
+            skip_next = False
+            continue
+        if token in WRITE_REDIRECTS or token in INPUT_REDIRECTS:
+            if kept and kept[-1].isdigit():
+                kept.pop()
+            skip_next = True
+            continue
+        kept.append(token)
+    return kept
+
+
+def unwrap(segment: list[str]) -> list[str]:
+    """The command a segment runs, after leading VAR=value assignments and
+    wrapper commands such as env, nohup or timeout. Empty when only
+    assignments and wrappers are present (a bare `env` lists the environment)."""
+    index = 0
+    while index < len(segment):
+        token = segment[index]
+        if ASSIGNMENT.match(token):
+            index += 1
+            continue
+        name = Path(token).name
+        if name not in WRAPPERS:
+            break
+        index += 1
+        while index < len(segment) and segment[index].startswith("-") and segment[index] != "-":
+            index += 2 if segment[index] in WRAPPERS[name] else 1
+        if name == "timeout":
+            index += 1  # the duration
+    return segment[index:]
+
+
+def file_command_targets(command: list[str]) -> list[str]:
+    """Paths a cp, mv, rm, dd or similar command writes, creates or removes."""
+    name = Path(command[0]).name
+    args = command[1:]
+    if name == "dd":
+        return [arg[3:] for arg in args if arg.startswith("of=")]
+    if name not in DESTINATION_COMMANDS and name not in OPERAND_COMMANDS:
+        return []
+    with_value = FILE_OPTIONS_WITH_VALUE.get(name, set())
+    operands: list[str] = []
+    directories: list[str] = []
+    index = 0
+    while index < len(args):
+        arg = args[index]
+        if arg == "--":
+            operands += args[index + 1 :]
+            break
+        if name in DESTINATION_COMMANDS and arg in TARGET_DIRECTORY_OPTIONS and index + 1 < len(args):
+            directories.append(args[index + 1])
+            index += 2
+        elif name in DESTINATION_COMMANDS and arg.startswith("--target-directory="):
+            directories.append(arg.split("=", 1)[1])
+            index += 1
+        elif arg.startswith("-") and arg != "-":
+            index += 2 if arg in with_value else 1
+        else:
+            operands.append(arg)
+            index += 1
+    if name in DESTINATION_COMMANDS:
+        return directories or operands[-1:]
+    return operands
+
+
+def lists_environment(segment: list[str], command: list[str]) -> bool:
+    """True for printenv, a bare env, set, export -p and similar listings."""
+    if not command:
+        return any(Path(token).name == "env" for token in segment)
+    name = Path(command[0]).name
+    args = command[1:]
+    if name == "printenv":
+        return not args
+    if name == "set":
+        return not args
+    return name in ENV_LISTING_BUILTINS and all(arg.startswith("-") for arg in args)
+
+
 def git_subcommand(segment: list[str]) -> tuple[str, list[str]] | None:
     """("push", [args]) for a segment that runs git, else None."""
     if not segment or Path(segment[0]).name != "git":
@@ -125,6 +257,19 @@ def write_targets(segment: list[str]) -> list[str]:
     if segment[0] == "tee":
         targets += [token for token in segment[1:] if not token.startswith("-")]
     return targets
+
+
+def next_directory(command: list[str], cwd: Path | None) -> Path | None:
+    """Working directory after `cd`/`pushd`; None when it cannot be known statically."""
+    args = [arg for arg in command[1:] if not (arg.startswith("-") and arg != "-")]
+    if not args:
+        return Path.home()
+    target = args[0]
+    if target == "-" or "$" in target or "`" in target:
+        return None
+    if cwd is None and not Path(target).expanduser().is_absolute():
+        return None
+    return resolve(target, cwd or Path.home())
 
 
 class Guard:
@@ -190,19 +335,28 @@ class Guard:
         # Checked before shlex, which drops the backslashes of an unquoted Windows path.
         if self._mentions_secret(command.replace("\\", "/")):
             return SECRET_MESSAGE
+        if ENV_SECRET.search(command):
+            return ENV_SECRET_MESSAGE
         try:
             segments = shell_segments(command)
         except ValueError:
             return self._check_raw_bash(command)
+        current: Path | None = cwd
         for segment in segments:
-            message = self._check_segment(segment, cwd)
+            program = unwrap(without_redirects(segment))
+            if program and program[0] in ("cd", "pushd"):
+                current = next_directory(program, current)
+                continue
+            message = self._check_segment(segment, program, current)
             if message:
                 return message
         return None
 
-    def _check_segment(self, segment: list[str], cwd: Path) -> str | None:
+    def _check_segment(self, segment: list[str], program: list[str], cwd: Path | None) -> str | None:
+        if lists_environment(segment, program):
+            return ENV_SECRET_MESSAGE
         text = " ".join(segment)
-        git = git_subcommand(segment)
+        git = git_subcommand(program)
         if git is not None:
             name, args = git
             if name == "push":
@@ -211,10 +365,16 @@ class Guard:
                 return DISCARD_MESSAGE
         elif any(pattern.search(text) for pattern in SERIAL_PATTERNS):
             return SERIAL_MESSAGE
-        for target in write_targets(segment):
+        targets = write_targets(segment) + (file_command_targets(program) if program else [])
+        for target in targets:
             if target in HARMLESS_TARGETS or target.startswith("$"):
                 continue
-            message = self._check_write(target, cwd)
+            if cwd is None and not Path(target).expanduser().is_absolute():
+                return (
+                    f"The guard cannot tell which directory the earlier cd selected, so the relative path "
+                    f"{target} cannot be checked. Use a literal cd target or an absolute path under {self.root}."
+                )
+            message = self._check_write(target, cwd or self.root)
             if message:
                 return message
         return None

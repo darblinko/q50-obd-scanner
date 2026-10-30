@@ -185,3 +185,114 @@ def test_shell_segments_split_on_separators():
 def test_denies_powershell():
     reason = denied(decide("PowerShell", {"command": "Get-ChildItem"}))
     assert "PowerShell is not available" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "env git push",
+        "env -i PATH=/usr/bin git push origin main",
+        "GIT_TRACE=1 git push",
+        "command git push",
+        "nohup git push &",
+        "timeout 30 git push",
+        "sudo git clean -fd",
+    ],
+)
+def test_denies_git_behind_wrappers(command):
+    reason = denied(decide("Bash", {"command": command}))
+    assert "push" in reason or "undo_change" in reason
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cp README.md ../copied.txt",
+        "cp -r q50diag /tmp/q50diag-copy",
+        "mv notes.txt /home/user/notes.txt",
+        "cp -t /tmp README.md",
+        "rsync -a q50diag/ /tmp/backup/",
+        "touch ../marker",
+        "mkdir -p /tmp/out",
+        "rm -rf ../other",
+        "dd if=/dev/zero of=/tmp/blob bs=1 count=1",
+        "env cp README.md /tmp/x",
+    ],
+)
+def test_denies_file_commands_outside_project(command):
+    assert "outside" in denied(decide("Bash", {"command": command}))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cd .. && echo text > copied.txt",
+        "cd /tmp; touch x",
+        "cd q50diag && cd ../.. && cp a b",
+    ],
+)
+def test_tracks_cd_for_relative_write_targets(command):
+    assert "outside" in denied(decide("Bash", {"command": command}))
+
+
+def test_denies_relative_write_after_unresolvable_cd():
+    assert "cd" in denied(decide("Bash", {"command": "cd $SOMEWHERE && echo x > out.txt"}))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cd q50diag && echo x > ../logs/out.txt",
+        "cp README.md logs/readme-copy.md",
+        "mkdir -p logs/run1",
+        "rm -f logs/old.txt",
+        "cd tests && python -m pytest -q test_dtc.py",
+    ],
+)
+def test_allows_file_commands_inside_project(command):
+    assert decide("Bash", {"command": command}) == {}
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "screen /dev/cu.usbserial-123 115200",
+        "cat /dev/cu.usbmodem1101",
+    ],
+)
+def test_denies_macos_serial_devices(command):
+    assert "q50 tools" in denied(decide("Bash", {"command": command}))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "printenv ANTHROPIC_API_KEY",
+        "echo $ANTHROPIC_API_KEY",
+        'echo "${ANTHROPIC_AUTH_TOKEN}"',
+        "printenv",
+        "env",
+        "env | grep KEY",
+        "set",
+        "export -p",
+        "declare -px",
+        "cat /proc/self/environ",
+        "python -c 'import os; print(os.environ[\"ANTHROPIC_API_KEY\"])'",
+    ],
+)
+def test_denies_reading_credentials_from_environment(command):
+    assert "credentials" in denied(decide("Bash", {"command": command}))
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "printenv HOME",
+        "set -euo pipefail; python -m pytest -q",
+        "export PYTHONPATH=.",
+        "env PYTHONPATH=. python -m pytest -q tests/test_dtc.py",
+        "timeout 60 python -m pytest -q 2>&1 | tail -5",
+    ],
+)
+def test_allows_environment_use_without_listing(command):
+    assert decide("Bash", {"command": command}) == {}
