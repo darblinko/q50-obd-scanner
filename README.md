@@ -4,7 +4,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/overview-dark.svg">
-  <img alt="18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 714 tests that need no adapter or API key." src="docs/figures/overview-light.svg" width="760">
+  <img alt="18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 786 tests that need no adapter or API key." src="docs/figures/overview-light.svg" width="760">
 </picture>
 
 <details><summary>Data table</summary>
@@ -14,7 +14,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 | MCP tools exposed to the agent | 18 | `TOOL_SPECS` in q50diag/mechaniq/tools.py |
 | Service IDs on the request allowlist | 16 | q50diag/core/transport.py |
 | OBD-II mode 01 definitions | 218 | `MODE01_PIDS` in q50diag/protocol/obd2.py |
-| Tests, no adapter or API key | 714 | `uv run pytest --collect-only -q` |
+| Tests, no adapter or API key | 786 | `uv run pytest --collect-only -q` |
 
 </details>
 
@@ -25,7 +25,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 - Pages for overview, trouble codes, per-module identification and identifier explorer, live data and gauges, a steering (EPS) watch with event marks, passive bus monitor, raw console and CSV recordings.
 - MechanIQ, a Claude Agent SDK agent in a side panel, reads live values, scans codes, marks events and analyses recordings through 18 MCP tools. It can also edit the app's own source: `apply_change` runs the related tests, hot reloads the changed modules and commits locally, or rejects the change.
 - A PreToolUse guard hook blocks the agent's writes outside the project, serial port access, `.env` and settings file access, printing the Anthropic credentials from the environment, `git push` and destructive git commands.
-- A simulator transport replays a 90 s drive cycle for each vehicle profile, so the GUI, the agent tools and all 714 tests run without an adapter.
+- A simulator transport replays a 90 s drive cycle for each vehicle profile, so the GUI, the agent tools and all 786 tests run without an adapter.
 
 <p align="center"><img src="docs/images/steering-simulator.png" alt="Steering page on the simulator: battery, speed, RPM, steering angle and EPS readouts, charts with two event marks, and the MechanIQ panel on the right." width="760"></p>
 
@@ -87,7 +87,7 @@ Source: [docs/q50-findings-2026-10-17.md](docs/q50-findings-2026-10-17.md), one 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/guard-cases-dark.svg">
-  <img alt="Deny cases: 12 for .env and settings file access, 6 for serial ports, 5 for writes outside the project, 4 each for Bash writes outside the project, git push and destructive git, 1 for PowerShell. Allow cases: 13 ordinary Bash commands and 9 file, MCP and Task tool calls." src="docs/figures/guard-cases-light.svg" width="760">
+  <img alt="Deny cases: 12 for .env and settings file access, 11 for reading credentials from the environment, 10 for file commands such as cp and rm outside the project, 8 for serial ports, 7 for git behind wrappers such as env and sudo, 5 for file tool writes outside the project, 4 each for redirects or tee outside the project, relative writes after cd, git push and destructive git, 1 for PowerShell. Allow cases: 13 ordinary Bash commands, 9 file, MCP and Task tool calls, 5 file commands inside the project and 5 environment uses that list no variables." src="docs/figures/guard-cases-light.svg" width="760">
 </picture>
 
 <details><summary>Data table</summary>
@@ -95,14 +95,20 @@ Source: [docs/q50-findings-2026-10-17.md](docs/q50-findings-2026-10-17.md), one 
 | Item | Value |
 |---|---|
 | deny: .env and settings file | 12 (pass) |
-| deny: serial port access | 6 (pass) |
+| deny: credentials in the environment | 11 (pass) |
+| deny: file command outside project | 10 (pass) |
+| deny: serial port access | 8 (pass) |
+| deny: git behind a wrapper | 7 (pass) |
 | deny: file tool write outside project | 5 (pass) |
-| deny: Bash write outside project | 4 (pass) |
+| deny: redirect or tee outside project | 4 (pass) |
+| deny: relative write after cd | 4 (pass) |
 | deny: git push | 4 (pass) |
 | deny: git reset --hard, git clean | 4 (pass) |
 | deny: PowerShell | 1 (pass) |
 | allow: ordinary Bash | 13 (pass) |
 | allow: file, MCP and Task tools | 9 (pass) |
+| allow: file command inside project | 5 (pass) |
+| allow: environment use, no listing | 5 (pass) |
 
 Source: `uv run pytest --collect-only -q tests/test_mechaniq_guard.py`
 
@@ -162,7 +168,7 @@ No fault-code descriptions ship with this repository. The app reads them from a 
 | q50diag/mechaniq/ | Agent runner, MCP tools, guard hook, prompts, change log, hot reload, settings |
 | q50diag/gui/ | PySide6 pages, widgets and the MechanIQ panel |
 | packaging/ | PyInstaller spec, launcher, frozen runtime checks, end user guide |
-| tests/ | 714 tests in 36 files, including the fake serial adapter |
+| tests/ | 786 tests in 37 files, including the fake serial adapter |
 | docs/ | Q50 findings and research, README figures, landing page, data.json |
 
 ## Design decisions and limitations
