@@ -142,7 +142,7 @@ Requirements: Python 3.12 installed on the system and [uv](https://docs.astral.s
 
 ```bash
 git clone https://github.com/darblinko/q50-obd-scanner
-cd obd-scanner
+cd q50-obd-scanner
 uv sync --frozen
 QT_QPA_PLATFORM=offscreen uv run pytest -q
 uv run python -m q50diag --sim
