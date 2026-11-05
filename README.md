@@ -4,7 +4,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/figures/overview-dark.svg">
-  <img alt="18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 841 tests that need no adapter or API key." src="docs/figures/overview-light.svg" width="760">
+  <img alt="18 MCP tools, 16 allowed diagnostic service IDs, 218 OBD-II mode 01 definitions, 844 tests that need no adapter or API key." src="docs/figures/overview-light.svg" width="760">
 </picture>
 
 <details><summary>Data table</summary>
@@ -14,7 +14,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 | MCP tools exposed to the agent | 18 | `TOOL_SPECS` in q50diag/mechaniq/tools.py |
 | Service IDs on the request allowlist | 16 | q50diag/core/transport.py |
 | OBD-II mode 01 definitions | 218 | `MODE01_PIDS` in q50diag/protocol/obd2.py |
-| Tests, no adapter or API key | 841 | `uv run pytest --collect-only -q` |
+| Tests, no adapter or API key | 844 | `uv run pytest --collect-only -q` |
 
 </details>
 
@@ -25,7 +25,7 @@ A desktop diagnostic app (package `q50diag`) that reads a car over KWP2000, UDS 
 - Pages for overview, trouble codes, per-module identification and identifier explorer, live data and gauges, a steering (EPS) watch with event marks, passive bus monitor, raw console and CSV recordings.
 - MechanIQ, a Claude Agent SDK agent in a side panel, reads live values, scans codes, marks events and analyses recordings through 18 MCP tools. It can also edit the app's own source: `apply_change` runs the related tests, hot reloads the changed modules and commits locally, or rejects the change.
 - A PreToolUse guard hook blocks the agent's writes outside the project, serial port access, `.env` and settings file access, printing the Anthropic credentials from the environment, `git push` and destructive git commands.
-- A simulator transport replays a 90 s drive cycle for each vehicle profile, so the GUI, the agent tools and all 841 tests run without an adapter.
+- A simulator transport replays a 90 s drive cycle for each vehicle profile, so the GUI, the agent tools and all 844 tests run without an adapter.
 
 <p align="center"><img src="docs/images/steering-simulator.png" alt="Steering page on the simulator: battery, speed, RPM, steering angle and EPS readouts, charts with two event marks, and the MechanIQ panel on the right." width="760"></p>
 
@@ -170,7 +170,7 @@ No fault-code descriptions ship with this repository. The app reads them from a 
 | q50diag/mechaniq/ | Agent runner, MCP tools, guard hook, prompts, change log, hot reload, settings |
 | q50diag/gui/ | PySide6 pages, widgets and the MechanIQ panel |
 | packaging/ | PyInstaller spec, launcher, frozen runtime checks, end user guide |
-| tests/ | 841 tests in 37 files, including the fake serial adapter |
+| tests/ | 844 tests in 37 files, including the fake serial adapter |
 | docs/ | Q50 findings and research, README figures, landing page, data.json |
 
 ## Design decisions and limitations
